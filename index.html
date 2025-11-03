@@ -383,7 +383,7 @@
                 </label>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                     <button id="surprise" class="btn-ghost">Surprise me</button>
-                    <button id="copyPrompt" class="btn-ghost">Copy prompt</button>
+                    <button id="pastePrompt" class="btn-ghost">Paste Prompt</button>
                     <span id="chars" class="pill">0 prompts</span>
                 </div>
             </div>
@@ -514,7 +514,7 @@
             gallery: document.getElementById('gallery'),
             chars: document.getElementById('chars'),
             surprise: document.getElementById('surprise'),
-            copyPrompt: document.getElementById('copyPrompt'),
+            pastePrompt: document.getElementById('pastePrompt'),
             downloadAll: document.getElementById('downloadAll'),
             format: document.getElementById('format'),
             multi: document.getElementById('multi'),
@@ -688,40 +688,40 @@
         }
         function _hamming(a, b) { if (!a || !b || a.length !== b.length) return 64; let d = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++; return d; }
 
-       /* ---------- GPU upscale ---------- */
-function getGpuReadableName(gl) {
-  try {
-    const ext = gl.getExtension('WEBGL_debug_renderer_info');
-    if (!ext) return gl.getParameter(gl.RENDERER) || 'unknown';
-    return gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || gl.getParameter(gl.RENDERER) || 'unknown';
-  } catch {
-    return 'unknown';
-  }
-}
-function targetTooLargeForWebGL(tw, th) {
-  const maxDim = Math.max(tw, th), total = tw * th;
-  return maxDim > 6144 || total > 24_000_000;
-}
-function createGLCanvas(tw, th) {
-  const canvas = document.createElement('canvas');
-  canvas.width = tw; canvas.height = th;
-  const attrs = { premultipliedAlpha: false, powerPreference: 'high-performance' };
-  let gl = canvas.getContext('webgl2', attrs); let ver = 'WebGL2';
-  if (!gl) { gl = canvas.getContext('webgl', attrs); ver = gl ? 'WebGL1' : null; }
-  return gl ? { canvas, gl, ver } : null;
-}
+        /* ---------- GPU upscale ---------- */
+        function getGpuReadableName(gl) {
+            try {
+                const ext = gl.getExtension('WEBGL_debug_renderer_info');
+                if (!ext) return gl.getParameter(gl.RENDERER) || 'unknown';
+                return gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || gl.getParameter(gl.RENDERER) || 'unknown';
+            } catch {
+                return 'unknown';
+            }
+        }
+        function targetTooLargeForWebGL(tw, th) {
+            const maxDim = Math.max(tw, th), total = tw * th;
+            return maxDim > 6144 || total > 24_000_000;
+        }
+        function createGLCanvas(tw, th) {
+            const canvas = document.createElement('canvas');
+            canvas.width = tw; canvas.height = th;
+            const attrs = { premultipliedAlpha: false, powerPreference: 'high-performance' };
+            let gl = canvas.getContext('webgl2', attrs); let ver = 'WebGL2';
+            if (!gl) { gl = canvas.getContext('webgl', attrs); ver = gl ? 'WebGL1' : null; }
+            return gl ? { canvas, gl, ver } : null;
+        }
 
-function gpuBicubicUpscale(img, tw, th) {
-  if (!els.gpuEnable.checked) return null;
-  if (targetTooLargeForWebGL(tw, th)) return null;
+        function gpuBicubicUpscale(img, tw, th) {
+            if (!els.gpuEnable.checked) return null;
+            if (targetTooLargeForWebGL(tw, th)) return null;
 
-  const srcW = img.naturalWidth || img.width, srcH = img.naturalHeight || img.height;
-  const ctx = createGLCanvas(tw, th); if (!ctx) return null;
-  const { canvas: glCanvas, gl, ver } = ctx;
+            const srcW = img.naturalWidth || img.width, srcH = img.naturalHeight || img.height;
+            const ctx = createGLCanvas(tw, th); if (!ctx) return null;
+            const { canvas: glCanvas, gl, ver } = ctx;
 
-  try { els.gpuInfo.textContent = `GPU: ${ver} · ${getGpuReadableName(gl)}`; } catch {}
+            try { els.gpuInfo.textContent = `GPU: ${ver} · ${getGpuReadableName(gl)}`; } catch { }
 
-  const vs2 = `#version 300 es
+            const vs2 = `#version 300 es
 in vec2 p;
 out vec2 uv;
 void main(){
@@ -730,7 +730,7 @@ void main(){
   gl_Position = vec4(p, 0.0, 1.0);
 }`;
 
-  const fs2 = `#version 300 es
+            const fs2 = `#version 300 es
 precision highp float;
 uniform sampler2D t;
 uniform vec2 srcSize;
@@ -750,7 +750,7 @@ vec4 sampleBicubic(vec2 coord){
 }
 void main(){o=sampleBicubic(uv);} `;
 
-  const vs1 = `
+            const vs1 = `
 attribute vec2 p;
 varying vec2 uv;
 void main(){
@@ -759,509 +759,536 @@ void main(){
   gl_Position = vec4(p, 0.0, 1.0);
 }`;
 
-  const fs1 = `precision mediump float;
+            const fs1 = `precision mediump float;
 varying vec2 uv;
 uniform sampler2D t;
 void main(){ gl_FragColor = texture2D(t, uv); }`;
 
-  function sh(type, src) {
-    const s = gl.createShader(type);
-    gl.shaderSource(s, src);
-    gl.compileShader(s);
-    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
-      throw new Error(gl.getShaderInfoLog(s) || 'shader compile failed');
-    return s;
-  }
+            function sh(type, src) {
+                const s = gl.createShader(type);
+                gl.shaderSource(s, src);
+                gl.compileShader(s);
+                if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
+                    throw new Error(gl.getShaderInfoLog(s) || 'shader compile failed');
+                return s;
+            }
 
-  try {
-    const prog = gl.createProgram();
-    if (ver === 'WebGL2') {
-      gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs2));
-      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs2));
-    } else {
-      gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs1));
-      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs1));
-    }
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
-      throw new Error(gl.getProgramInfoLog(prog) || 'link failed');
-    gl.useProgram(prog);
+            try {
+                const prog = gl.createProgram();
+                if (ver === 'WebGL2') {
+                    gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs2));
+                    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs2));
+                } else {
+                    gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs1));
+                    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs1));
+                }
+                gl.linkProgram(prog);
+                if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+                    throw new Error(gl.getProgramInfoLog(prog) || 'link failed');
+                gl.useProgram(prog);
 
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(prog, 'p');
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+                const buf = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+                const loc = gl.getAttribLocation(prog, 'p');
+                gl.enableVertexAttribArray(loc);
+                gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-    gl.activeTexture(gl.TEXTURE0);
-    const tex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                gl.activeTexture(gl.TEXTURE0);
+                const tex = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, tex);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+                gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
 
-    gl.uniform1i(gl.getUniformLocation(prog, 't'), 0);
-    if (ver === 'WebGL2') gl.uniform2f(gl.getUniformLocation(prog, 'srcSize'), srcW, srcH);
+                gl.uniform1i(gl.getUniformLocation(prog, 't'), 0);
+                if (ver === 'WebGL2') gl.uniform2f(gl.getUniformLocation(prog, 'srcSize'), srcW, srcH);
 
-    gl.viewport(0, 0, tw, th);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                gl.viewport(0, 0, tw, th);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    if (gl.getError()) return null;
-    return glCanvas;
-  } catch {
-    return null;
-  }
-}
+                if (gl.getError()) return null;
+                return glCanvas;
+            } catch {
+                return null;
+            }
+        }
 
-/* ---------- CPU upscale fallback ---------- */
-function createCanvas(w, h) {
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  return c;
-}
-function safe2d(c) {
-  const ctx = c.getContext('2d');
-  if (!ctx) throw new Error('2D context unavailable');
-  return ctx;
-}
-function drawImageHQ(ctx, img, dx, dy, dw, dh) {
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(img, dx, dy, dw, dh);
-}
-function multiStepResize(img, tw, th) {
-  let cw = img.naturalWidth || img.width, ch = img.naturalHeight || img.height, src = img;
-  while (cw * 1.5 < tw || ch * 1.5 < th) {
-    const nw = Math.min(Math.round(cw * 1.5), tw), nh = Math.min(Math.round(ch * 1.5), th);
-    const tmp = createCanvas(nw, nh);
-    const tctx = safe2d(tmp);
-    drawImageHQ(tctx, src, 0, 0, nw, nh);
-    src = tmp; cw = nw; ch = nh;
-  }
-  if (cw !== tw || ch !== th) {
-    const f = createCanvas(tw, th);
-    const fctx = safe2d(f);
-    drawImageHQ(fctx, src, 0, 0, tw, th);
-    src = f;
-  }
-  return src;
-}
-function to2DCanvas(src) {
-  try { const ctx = src.getContext && src.getContext('2d'); if (ctx) return src; } catch {}
-  const c = document.createElement('canvas');
-  c.width = src.width; c.height = src.height;
-  const ctx2 = c.getContext('2d');
-  ctx2.drawImage(src, 0, 0);
-  return c;
-}
-async function upscaleAuto(img, tw, th) {
-  try { const glc = gpuBicubicUpscale(img, tw, th); if (glc) return to2DCanvas(glc); } catch {}
-  return multiStepResize(img, tw, th);
-}
+        /* ---------- CPU upscale fallback ---------- */
+        function createCanvas(w, h) {
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            return c;
+        }
+        function safe2d(c) {
+            const ctx = c.getContext('2d');
+            if (!ctx) throw new Error('2D context unavailable');
+            return ctx;
+        }
+        function drawImageHQ(ctx, img, dx, dy, dw, dh) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, dx, dy, dw, dh);
+        }
+        function multiStepResize(img, tw, th) {
+            let cw = img.naturalWidth || img.width, ch = img.naturalHeight || img.height, src = img;
+            while (cw * 1.5 < tw || ch * 1.5 < th) {
+                const nw = Math.min(Math.round(cw * 1.5), tw), nh = Math.min(Math.round(ch * 1.5), th);
+                const tmp = createCanvas(nw, nh);
+                const tctx = safe2d(tmp);
+                drawImageHQ(tctx, src, 0, 0, nw, nh);
+                src = tmp; cw = nw; ch = nh;
+            }
+            if (cw !== tw || ch !== th) {
+                const f = createCanvas(tw, th);
+                const fctx = safe2d(f);
+                drawImageHQ(fctx, src, 0, 0, tw, th);
+                src = f;
+            }
+            return src;
+        }
+        function to2DCanvas(src) {
+            try { const ctx = src.getContext && src.getContext('2d'); if (ctx) return src; } catch { }
+            const c = document.createElement('canvas');
+            c.width = src.width; c.height = src.height;
+            const ctx2 = c.getContext('2d');
+            ctx2.drawImage(src, 0, 0);
+            return c;
+        }
+        async function upscaleAuto(img, tw, th) {
+            try { const glc = gpuBicubicUpscale(img, tw, th); if (glc) return to2DCanvas(glc); } catch { }
+            return multiStepResize(img, tw, th);
+        }
 
-            /* ---------- Post FX ---------- */
-            function applyMedianBlend(canvas, strength) {
-                if (strength <= 0) return canvas; const w = canvas.width, h = canvas.height; const ctx = safe2d(canvas);
-                const src = ctx.getImageData(0, 0, w, h), dst = ctx.createImageData(w, h), s = src.data, d = dst.data;
-                const idx = (x, y) => (y * w + x) * 4; const kx = [-1, 0, 1, -1, 0, 1, -1, 0, 1], ky = [-1, -1, -1, 0, 0, 0, 1, 1, 1];
-                for (let y = 1; y < h - 1; y++) {
-                    for (let x = 1; x < w - 1; x++) {
-                        const rA = [], gA = [], bA = []; for (let k = 0; k < 9; k++) { const i = idx(x + kx[k], y + ky[k]); rA.push(s[i]); gA.push(s[i + 1]); bA.push(s[i + 2]); }
-                        rA.sort((a, b) => a - b); gA.sort((a, b) => a - b); bA.sort((a, b) => a - b);
-                        const i = idx(x, y), mr = rA[4], mg = gA[4], mb = bA[4];
-                        d[i] = Math.round(s[i] * (1 - strength) + mr * strength); d[i + 1] = Math.round(s[i + 1] * (1 - strength) + mg * strength); d[i + 2] = Math.round(s[i + 2] * (1 - strength) + mb * strength); d[i + 3] = s[i + 3];
+        /* ---------- Post FX ---------- */
+        function applyMedianBlend(canvas, strength) {
+            if (strength <= 0) return canvas; const w = canvas.width, h = canvas.height; const ctx = safe2d(canvas);
+            const src = ctx.getImageData(0, 0, w, h), dst = ctx.createImageData(w, h), s = src.data, d = dst.data;
+            const idx = (x, y) => (y * w + x) * 4; const kx = [-1, 0, 1, -1, 0, 1, -1, 0, 1], ky = [-1, -1, -1, 0, 0, 0, 1, 1, 1];
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    const rA = [], gA = [], bA = []; for (let k = 0; k < 9; k++) { const i = idx(x + kx[k], y + ky[k]); rA.push(s[i]); gA.push(s[i + 1]); bA.push(s[i + 2]); }
+                    rA.sort((a, b) => a - b); gA.sort((a, b) => a - b); bA.sort((a, b) => a - b);
+                    const i = idx(x, y), mr = rA[4], mg = gA[4], mb = bA[4];
+                    d[i] = Math.round(s[i] * (1 - strength) + mr * strength); d[i + 1] = Math.round(s[i + 1] * (1 - strength) + mg * strength); d[i + 2] = Math.round(s[i + 2] * (1 - strength) + mb * strength); d[i + 3] = s[i + 3];
+                }
+            }
+            ctx.putImageData(dst, 0, 0); return canvas;
+        }
+
+        function applySharpen(canvas, amount) {
+            if (amount <= 0) return canvas;
+            const w = canvas.width, h = canvas.height; const ctx = safe2d(canvas);
+            const src = ctx.getImageData(0, 0, w, h), dst = ctx.createImageData(w, h);
+            const s = src.data, d = dst.data; const a = amount;
+            const k = [0, -1 * a, 0, -1 * a, 1 + 4 * a, -1 * a, 0, -1 * a, 0];
+            const pix = (x, y, c) => s[(y * w + x) * 4 + c] | 0;
+
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    for (let c = 0; c < 3; c++) {
+                        const val =
+                            pix(x - 1, y - 1, c) * k[0] + pix(x, y - 1, c) * k[1] + pix(x + 1, y - 1, c) * k[2] +
+                            pix(x - 1, y, c) * k[3] + pix(x, y, c) * k[4] + pix(x + 1, y, c) * k[5] +
+                            pix(x - 1, y + 1, c) * k[6] + pix(x, y + 1, c) * k[7] + pix(x + 1, y + 1, c) * k[8];
+                        d[(y * w + x) * 4 + c] = Math.max(0, Math.min(255, val));
                     }
+                    // FIX: alpha write inside x-loop (avoids "x is not defined")
+                    d[(y * w + x) * 4 + 3] = s[(y * w + x) * 4 + 3];
                 }
-                ctx.putImageData(dst, 0, 0); return canvas;
             }
+            ctx.putImageData(dst, 0, 0); return canvas;
+        }
 
-            function applySharpen(canvas, amount) {
-                if (amount <= 0) return canvas;
-                const w = canvas.width, h = canvas.height; const ctx = safe2d(canvas);
-                const src = ctx.getImageData(0, 0, w, h), dst = ctx.createImageData(w, h);
-                const s = src.data, d = dst.data; const a = amount;
-                const k = [0, -1 * a, 0, -1 * a, 1 + 4 * a, -1 * a, 0, -1 * a, 0];
-                const pix = (x, y, c) => s[(y * w + x) * 4 + c] | 0;
-
-                for (let y = 1; y < h - 1; y++) {
-                    for (let x = 1; x < w - 1; x++) {
-                        for (let c = 0; c < 3; c++) {
-                            const val =
-                                pix(x - 1, y - 1, c) * k[0] + pix(x, y - 1, c) * k[1] + pix(x + 1, y - 1, c) * k[2] +
-                                pix(x - 1, y, c) * k[3] + pix(x, y, c) * k[4] + pix(x + 1, y, c) * k[5] +
-                                pix(x - 1, y + 1, c) * k[6] + pix(x, y + 1, c) * k[7] + pix(x + 1, y + 1, c) * k[8];
-                            d[(y * w + x) * 4 + c] = Math.max(0, Math.min(255, val));
-                        }
-                        // FIX: alpha write inside x-loop (avoids "x is not defined")
-                        d[(y * w + x) * 4 + 3] = s[(y * w + x) * 4 + 3];
-                    }
-                }
-                ctx.putImageData(dst, 0, 0); return canvas;
+        function applyContrast(canvas, boost) {
+            if (boost <= 0) return canvas;
+            const ctx = safe2d(canvas); const { width: w, height: h } = canvas;
+            const img = ctx.getImageData(0, 0, w, h); const d = img.data; const f = (1 + boost), m = 128;
+            for (let i = 0; i < d.length; i += 4) {
+                d[i] = Math.max(0, Math.min(255, (d[i] - m) * f + m));
+                d[i + 1] = Math.max(0, Math.min(255, (d[i + 1] - m) * f + m));
+                d[i + 2] = Math.max(0, Math.min(255, (d[i + 2] - m) * f + m));
             }
+            ctx.putImageData(img, 0, 0); return canvas;
+        }
 
-            function applyContrast(canvas, boost) {
-                if (boost <= 0) return canvas;
-                const ctx = safe2d(canvas); const { width: w, height: h } = canvas;
-                const img = ctx.getImageData(0, 0, w, h); const d = img.data; const f = (1 + boost), m = 128;
-                for (let i = 0; i < d.length; i += 4) {
-                    d[i] = Math.max(0, Math.min(255, (d[i] - m) * f + m));
-                    d[i + 1] = Math.max(0, Math.min(255, (d[i + 1] - m) * f + m));
-                    d[i + 2] = Math.max(0, Math.min(255, (d[i + 2] - m) * f + m));
-                }
-                ctx.putImageData(img, 0, 0); return canvas;
-            }
+        /* ---------- Orientation guard ---------- */
+        function adjustOrientationToMatch(imgW, imgH, targetW, targetH, tol = 0.06) {
+            const rGot = imgW / imgH, rWant = targetW / targetH;
+            const nearly = (a, b) => Math.abs(a - b) / Math.max(a, b) <= tol;
+            if (nearly(rGot, rWant)) return { w: targetW, h: targetH };
+            if (nearly(rGot, targetH / targetW)) return { w: targetH, h: targetW };
+            return { w: targetW, h: targetH };
+        }
 
-            /* ---------- Orientation guard ---------- */
-            function adjustOrientationToMatch(imgW, imgH, targetW, targetH, tol = 0.06) {
-                const rGot = imgW / imgH, rWant = targetW / targetH;
-                const nearly = (a, b) => Math.abs(a - b) / Math.max(a, b) <= tol;
-                if (nearly(rGot, rWant)) return { w: targetW, h: targetH };
-                if (nearly(rGot, targetH / targetW)) return { w: targetH, h: targetW };
-                return { w: targetW, h: targetH };
-            }
-
-            /* ---------- Fetch + upscale + encode ---------- */
-            // Make a canvas from a fetched Blob, honoring EXIF orientation
-            async function canvasFromBlobRespectOrientation(blob) {
-                // Preferred path: createImageBitmap respects EXIF when asked
-                if ('createImageBitmap' in window) {
-                    try {
-                        const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
-                        const c = document.createElement('canvas');
-                        c.width = bmp.width; c.height = bmp.height;
-                        const ctx = c.getContext('2d');
-                        ctx.drawImage(bmp, 0, 0);
-                        bmp.close?.();
-                        return c;
-                    } catch { }
-                }
-                // Fallback: use <img> (may ignore EXIF in canvas)
-                const url = URL.createObjectURL(blob);
+        /* ---------- Fetch + upscale + encode ---------- */
+        // Make a canvas from a fetched Blob, honoring EXIF orientation
+        async function canvasFromBlobRespectOrientation(blob) {
+            // Preferred path: createImageBitmap respects EXIF when asked
+            if ('createImageBitmap' in window) {
                 try {
-                    const img = new Image();
-                    img.crossOrigin = 'anonymous';
-                    img.src = url;
-                    await img.decode();
+                    const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
                     const c = document.createElement('canvas');
-                    c.width = img.naturalWidth || img.width;
-                    c.height = img.naturalHeight || img.height;
+                    c.width = bmp.width; c.height = bmp.height;
                     const ctx = c.getContext('2d');
-                    // Try to detect the classic upside-down case and rotate 180° as a heuristic
-                    // (only used if createImageBitmap is unavailable)
-                    ctx.save();
-                    // Heuristic toggle can be extended; keeping identity by default
-                    ctx.drawImage(img, 0, 0);
-                    ctx.restore();
+                    ctx.drawImage(bmp, 0, 0);
+                    bmp.close?.();
                     return c;
-                } finally {
-                    URL.revokeObjectURL(url);
-                }
+                } catch { }
             }
+            // Fallback: use <img> (may ignore EXIF in canvas)
+            const url = URL.createObjectURL(blob);
+            try {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.src = url;
+                await img.decode();
+                const c = document.createElement('canvas');
+                c.width = img.naturalWidth || img.width;
+                c.height = img.naturalHeight || img.height;
+                const ctx = c.getContext('2d');
+                // Try to detect the classic upside-down case and rotate 180° as a heuristic
+                // (only used if createImageBitmap is unavailable)
+                ctx.save();
+                // Heuristic toggle can be extended; keeping identity by default
+                ctx.drawImage(img, 0, 0);
+                ctx.restore();
+                return c;
+            } finally {
+                URL.revokeObjectURL(url);
+            }
+        }
 
-            async function toFormatted(imgUrl, { format, targetW, targetH, alt, signal }, tries = 3) {
-                const backoffBase = 600;
-                for (let attempt = 1; attempt <= tries; attempt++) {
-                    const bust = (imgUrl.includes('?') ? '&' : '?') + 'ts=' + Date.now();
-                    const urlWithBust = imgUrl + bust;
-                    try {
-                        const resp = await fetchWithTimeout(urlWithBust, { cache: 'no-store', signal }, 15000);
-                        if (!resp.ok) {
-                            if (attempt < tries && (resp.status === 429 || (resp.status >= 500 && resp.status < 600))) {
-                                await sleep(backoffBase + Math.random() * 400);
-                                continue;
-                            }
-                            throw new Error(`HTTP ${resp.status}`);
-                        }
-                        const ctype = (resp.headers.get('content-type') || '').toLowerCase();
-                        if (!ctype.startsWith('image/')) {
-                            if (attempt < tries) { await sleep(backoffBase + Math.random() * 400); continue; }
-                            throw new Error(`Non-image (${ctype})`);
-                        }
-
-                        const blob = await resp.blob();
-
-                        // ✅ Normalize orientation here
-                        const baseCanvas = await canvasFromBlobRespectOrientation(blob);
-
-                        // Dimensions after EXIF fix
-                        const srcW = baseCanvas.width, srcH = baseCanvas.height;
-
-                        // If the target aspect mismatches by ~180° flip, swap (extra guard)
-                        const rGot = srcW / srcH, rWant = targetW / targetH;
-                        const nearly = (a, b, tol = 0.06) => Math.abs(a - b) / Math.max(a, b) <= tol;
-                        const [tw, th] = nearly(rGot, rWant) ? [targetW, targetH]
-                            : nearly(rGot, targetH / targetW) ? [targetH, targetW]
-                                : [targetW, targetH];
-
-                        // Quality screen (optional)
-                        if (els.skipAbnormal && els.skipAbnormal.checked) {
-                            const probeImg = new Image();
-                            probeImg.src = baseCanvas.toDataURL('image/png');
-                            await probeImg.decode();
-                            const ok = await analyzeImageQuality(probeImg, tw, th);
-                            if (!ok) throw new Error('SKIP_BAD_IMAGE');
-                        }
-
-                        // Upscale from orientation-corrected canvas
-                        let outCanvas = await upscaleAuto(baseCanvas, tw, th);
-                        outCanvas = applyMedianBlend(outCanvas, 0.12);
-                        outCanvas = applySharpen(outCanvas, 0.45);
-                        outCanvas = applyContrast(outCanvas, 0.06);
-
-                        const useJpeg = (format === 'jpeg');
-                        const mime = useJpeg ? 'image/jpeg' : 'image/png';
-                        const dataUrl = outCanvas.toDataURL(mime, useJpeg ? 1.0 : undefined);
-
-                        const out = new Image();
-                        out.src = dataUrl; out.alt = alt || '';
-                        await out.decode();
-                        out.dataset.format = useJpeg ? 'jpeg' : 'png';
-                        out.dataset.w = String(outCanvas.width);
-                        out.dataset.h = String(outCanvas.height);
-                        out.dataset.downloadHref = dataUrl;
-                        return out;
-
-                    } catch (e) {
-                        if (signal && signal.aborted) throw e;
-                        const msg = String(e && e.message || e);
-                        if (attempt < tries && (msg.includes('timeout') || msg.includes('Failed to fetch') || msg.includes('SKIP_BAD_IMAGE'))) {
+        async function toFormatted(imgUrl, { format, targetW, targetH, alt, signal }, tries = 3) {
+            const backoffBase = 600;
+            for (let attempt = 1; attempt <= tries; attempt++) {
+                const bust = (imgUrl.includes('?') ? '&' : '?') + 'ts=' + Date.now();
+                const urlWithBust = imgUrl + bust;
+                try {
+                    const resp = await fetchWithTimeout(urlWithBust, { cache: 'no-store', signal }, 15000);
+                    if (!resp.ok) {
+                        if (attempt < tries && (resp.status === 429 || (resp.status >= 500 && resp.status < 600))) {
                             await sleep(backoffBase + Math.random() * 400);
                             continue;
                         }
-                        if (attempt >= tries) throw e;
+                        throw new Error(`HTTP ${resp.status}`);
                     }
+                    const ctype = (resp.headers.get('content-type') || '').toLowerCase();
+                    if (!ctype.startsWith('image/')) {
+                        if (attempt < tries) { await sleep(backoffBase + Math.random() * 400); continue; }
+                        throw new Error(`Non-image (${ctype})`);
+                    }
+
+                    const blob = await resp.blob();
+
+                    // ✅ Normalize orientation here
+                    const baseCanvas = await canvasFromBlobRespectOrientation(blob);
+
+                    // Dimensions after EXIF fix
+                    const srcW = baseCanvas.width, srcH = baseCanvas.height;
+
+                    // If the target aspect mismatches by ~180° flip, swap (extra guard)
+                    const rGot = srcW / srcH, rWant = targetW / targetH;
+                    const nearly = (a, b, tol = 0.06) => Math.abs(a - b) / Math.max(a, b) <= tol;
+                    const [tw, th] = nearly(rGot, rWant) ? [targetW, targetH]
+                        : nearly(rGot, targetH / targetW) ? [targetH, targetW]
+                            : [targetW, targetH];
+
+                    // Quality screen (optional)
+                    if (els.skipAbnormal && els.skipAbnormal.checked) {
+                        const probeImg = new Image();
+                        probeImg.src = baseCanvas.toDataURL('image/png');
+                        await probeImg.decode();
+                        const ok = await analyzeImageQuality(probeImg, tw, th);
+                        if (!ok) throw new Error('SKIP_BAD_IMAGE');
+                    }
+
+                    // Upscale from orientation-corrected canvas
+                    let outCanvas = await upscaleAuto(baseCanvas, tw, th);
+                    outCanvas = applyMedianBlend(outCanvas, 0.12);
+                    outCanvas = applySharpen(outCanvas, 0.45);
+                    outCanvas = applyContrast(outCanvas, 0.06);
+
+                    const useJpeg = (format === 'jpeg');
+                    const mime = useJpeg ? 'image/jpeg' : 'image/png';
+                    const dataUrl = outCanvas.toDataURL(mime, useJpeg ? 1.0 : undefined);
+
+                    const out = new Image();
+                    out.src = dataUrl; out.alt = alt || '';
+                    await out.decode();
+                    out.dataset.format = useJpeg ? 'jpeg' : 'png';
+                    out.dataset.w = String(outCanvas.width);
+                    out.dataset.h = String(outCanvas.height);
+                    out.dataset.downloadHref = dataUrl;
+                    return out;
+
+                } catch (e) {
+                    if (signal && signal.aborted) throw e;
+                    const msg = String(e && e.message || e);
+                    if (attempt < tries && (msg.includes('timeout') || msg.includes('Failed to fetch') || msg.includes('SKIP_BAD_IMAGE'))) {
+                        await sleep(backoffBase + Math.random() * 400);
+                        continue;
+                    }
+                    if (attempt >= tries) throw e;
                 }
-                throw new Error('Unexpected: toFormatted exhausted retries.');
             }
+            throw new Error('Unexpected: toFormatted exhausted retries.');
+        }
 
 
-            /* ---------- Render cards ---------- */
-            function addToGallery(img, prompt, model, idx) {
-                const card = document.createElement('div'); card.className = 'imgcard';
-                const wrap = document.createElement('div'); wrap.className = 'imgwrap';
-                const ratio = els.aspect.value.split('/').map(Number);
-                if (ratio.length === 2) wrap.style.aspectRatio = `${ratio[0]} / ${ratio[1]}`;
-                img.alt = prompt; img.loading = 'lazy';
-                wrap.appendChild(img);
+        /* ---------- Render cards ---------- */
+        function addToGallery(img, prompt, model, idx) {
+            const card = document.createElement('div');
+            card.className = 'imgcard';
 
-                const tools = document.createElement('div'); tools.className = 'imgtools';
-                const meta = document.createElement('div'); meta.className = 'small';
-                const w = img.dataset.w || '—', h = img.dataset.h || '—';
-                meta.textContent = `${model} · ${prompt.slice(0, 64)}${prompt.length > 64 ? '…' : ''} · ${w}×${h}`;
+            const wrap = document.createElement('div');
+            wrap.className = 'imgwrap';
 
-                const upBtn = document.createElement('button');
-                upBtn.className = 'btn-ghost thumb'; upBtn.textContent = '👍';
-                upBtn.title = 'Looks good'; upBtn.setAttribute('aria-label', 'Mark this image good');
+            const ratio = els.aspect.value.split('/').map(Number);
+            if (ratio.length === 2) wrap.style.aspectRatio = `${ratio[0]} / ${ratio[1]}`;
 
-                const downBtn = document.createElement('button');
-                downBtn.className = 'btn-ghost thumb'; downBtn.textContent = '👎';
-                downBtn.title = 'Looks bad'; downBtn.setAttribute('aria-label', 'Mark this image bad');
+            img.alt = prompt;
+            img.loading = 'lazy';
+            wrap.appendChild(img);
 
-                upBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    recordVote(prompt, model, Number(img.dataset.seed || 0), true);
-                    makeRipple(e, upBtn); makeBurst(upBtn, '💫'); makeToast(upBtn, 'Saved');
-                }, { passive: false });
+            const tools = document.createElement('div');
+            tools.className = 'imgtools';
 
-                downBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    recordVote(prompt, model, Number(img.dataset.seed || 0), false);
-                    makeRipple(e, downBtn); makeBurst(downBtn, '💥'); makeToast(downBtn, 'Saved', true);
-                }, { passive: false });
+            const meta = document.createElement('div');
+            meta.className = 'small';
+            const w = img.dataset.w || '—', h = img.dataset.h || '—';
+            meta.textContent = `${model} · ${prompt.slice(0, 64)}${prompt.length > 64 ? '…' : ''} · ${w}×${h}`;
 
-                const dl = document.createElement('a'); dl.className = 'btn-ghost'; dl.textContent = 'Download';
-                const ext = img.dataset.format || (els.format.value === 'jpeg' ? 'jpeg' : 'png');
-                dl.download = filenameFromPrompt(prompt, idx, ext);
-                dl.href = img.dataset.downloadHref || img.src;
+            const upBtn = document.createElement('button');
+            upBtn.className = 'btn-ghost thumb';
+            upBtn.textContent = '👍';
+            upBtn.title = 'Looks good';
+            upBtn.setAttribute('aria-label', 'Mark this image good');
+            upBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                recordVote(prompt, model, Number(img.dataset.seed || 0), true);
+                makeRipple(e, upBtn);
+                makeBurst(upBtn, '💫');
+                makeToast(upBtn, 'Saved');
+            }, { passive: false });
 
-                const copyBtn = document.createElement('button'); copyBtn.className = 'btn-ghost'; copyBtn.textContent = 'Copy image';
-                copyBtn.onclick = async () => {
-                    try {
-                        const b = await (await fetch(img.src)).blob();
-                        await navigator.clipboard.write([new ClipboardItem({ [b.type]: b })]);
-                        makeToast(copyBtn, 'Copied');
-                    } catch { makeToast(copyBtn, 'Copy failed', true); }
-                };
+            const downBtn = document.createElement('button');
+            downBtn.className = 'btn-ghost thumb';
+            downBtn.textContent = '👎';
+            downBtn.title = 'Looks bad';
+            downBtn.setAttribute('aria-label', 'Mark this image bad');
+            downBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                recordVote(prompt, model, Number(img.dataset.seed || 0), false);
+                makeRipple(e, downBtn);
+                makeBurst(downBtn, '💥');
+                makeToast(downBtn, 'Saved', true);
+            }, { passive: false });
 
-                tools.appendChild(meta);
-                tools.appendChild(upBtn);
-                tools.appendChild(downBtn);
-                tools.appendChild(copyBtn);
-                tools.appendChild(dl);
+            const dl = document.createElement('a');
+            dl.className = 'btn-ghost';
+            dl.textContent = 'Download';
+            const ext = img.dataset.format || (els.format.value === 'jpeg' ? 'jpeg' : 'png');
+            dl.download = filenameFromPrompt(prompt, idx, ext);
+            dl.href = img.dataset.downloadHref || img.src;
 
-                card.appendChild(wrap);
-                card.appendChild(tools);
-                els.gallery.prepend(card);
-            }
+            // Append controls (no Paste Prompt button here anymore)
+            tools.appendChild(meta);
+            tools.appendChild(upBtn);
+            tools.appendChild(downBtn);
+            tools.appendChild(dl);
+            card.appendChild(wrap);
+            card.appendChild(tools);
+            els.gallery.prepend(card);
+        }
 
 
-            /* ---------- Main flow ---------- */
-            async function generateBatch() {
-                if (running) return;
-                const prompts = parsePrompts(els.prompt.value);
-                if (!prompts.length) { els.prompt.focus(); return; }
+        /* ---------- Main flow ---------- */
+        async function generateBatch() {
+            if (running) return;
+            const prompts = parsePrompts(els.prompt.value);
+            if (!prompts.length) { els.prompt.focus(); return; }
 
-                running = true; cancel = false;
-                els.gen.disabled = true; els.stop.disabled = false;
-                setBusy(true, 'Generating…');
+            running = true; cancel = false;
+            els.gen.disabled = true; els.stop.disabled = false;
+            setBusy(true, 'Generating…');
 
-                const n = parseInt(els.count.value, 10) || 1;
-                const outFormat = els.format.value;
-                const seedBase = els.seed.value.trim() ? Number(els.seed.value.trim()) : null;
-                const nologo = !!(els.nologo && els.nologo.checked);
+            const n = parseInt(els.count.value, 10) || 1;
+            const outFormat = els.format.value;
+            const seedBase = els.seed.value.trim() ? Number(els.seed.value.trim()) : null;
+            const nologo = !!(els.nologo && els.nologo.checked);
 
-                const { aw, ah } = parseAspect(els.aspect.value);
-                let targetW = parseInt(els.width.value, 10);
-                if (!Number.isFinite(targetW) || targetW < 64) targetW = 64;
-                if (targetW > 16384) targetW = 16384;
+            const { aw, ah } = parseAspect(els.aspect.value);
+            let targetW = parseInt(els.width.value, 10);
+            if (!Number.isFinite(targetW) || targetW < 64) targetW = 64;
+            if (targetW > 16384) targetW = 16384;
 
-                const targetH = els.lockAspect.checked
-                    ? Math.max(1, Math.round(targetW * (ah / aw)))
-                    : Math.max(1, parseInt(els.heightComputed.value || '0', 10) || Math.round(targetW * (ah / aw)));
-                els.heightComputed.value = String(targetH);
+            const targetH = els.lockAspect.checked
+                ? Math.max(1, Math.round(targetW * (ah / aw)))
+                : Math.max(1, parseInt(els.heightComputed.value || '0', 10) || Math.round(targetW * (ah / aw)));
+            els.heightComputed.value = String(targetH);
 
-                let k = 0; let skippedCount = 0;
-                setProgress(0, n * prompts.length);
-                if (els.skipCounter) els.skipCounter.textContent = 'Skipped: 0';
-                _seenHashes.clear();
-                currentAbort = new AbortController();
+            let k = 0; let skippedCount = 0;
+            setProgress(0, n * prompts.length);
+            if (els.skipCounter) els.skipCounter.textContent = 'Skipped: 0';
+            _seenHashes.clear();
+            currentAbort = new AbortController();
 
-                try {
-                    for (const p of prompts) {
-                        for (let i = 1; i <= n; i++) {
-                            if (cancel) { setBusy(false, 'Canceled'); throw new Error('canceled'); }
-                            setProgress(k, n * prompts.length);
-                            await nextFrame();
+            try {
+                for (const p of prompts) {
+                    for (let i = 1; i <= n; i++) {
+                        if (cancel) { setBusy(false, 'Canceled'); throw new Error('canceled'); }
+                        setProgress(k, n * prompts.length);
+                        await nextFrame();
 
-                            try {
-                                const chosenModel = chooseModel(p);
-                                const extraBad = Math.max(0, parseInt((els.smartRetries && els.smartRetries.value) || '0', 10));
-                                const extraDup = Math.max(0, parseInt((els.uniqueRetries && els.uniqueRetries.value) || '0', 10));
-                                const wantUnique = !!(els.avoidDup && els.avoidDup.checked);
+                        try {
+                            const chosenModel = chooseModel(p);
+                            const extraBad = Math.max(0, parseInt((els.smartRetries && els.smartRetries.value) || '0', 10));
+                            const extraDup = Math.max(0, parseInt((els.uniqueRetries && els.uniqueRetries.value) || '0', 10));
+                            const wantUnique = !!(els.avoidDup && els.avoidDup.checked);
 
-                                let finalImg = null, attempts = 0;
-                                while (attempts <= (extraBad + extraDup)) {
-                                    if (cancel) { setBusy(false, 'Canceled'); throw new Error('canceled'); }
+                            let finalImg = null, attempts = 0;
+                            while (attempts <= (extraBad + extraDup)) {
+                                if (cancel) { setBusy(false, 'Canceled'); throw new Error('canceled'); }
 
-                                    const base = seedBase !== null ? (seedBase + i - 1) : Math.floor(Math.random() * 1e9);
-                                    const thisSeed = (els.adaptive && els.adaptive.checked) ? pickSeed(p, base) : base;
-                                    const jitter = attempts === 0 ? 0 : (attempts * 9973 + Math.floor(Math.random() * 1000));
-                                    const trySeed = thisSeed + jitter;
+                                const base = seedBase !== null ? (seedBase + i - 1) : Math.floor(Math.random() * 1e9);
+                                const thisSeed = (els.adaptive && els.adaptive.checked) ? pickSeed(p, base) : base;
+                                const jitter = attempts === 0 ? 0 : (attempts * 9973 + Math.floor(Math.random() * 1000));
+                                const trySeed = thisSeed + jitter;
 
-                                    const urlTry = buildPollinationsUrl(p, {
-                                        model: chosenModel, width: targetW, height: targetH, seed: trySeed, nologo,
-                                        quality: `m${chosenModel}-a${attempts}`
-                                    });
+                                const urlTry = buildPollinationsUrl(p, {
+                                    model: chosenModel, width: targetW, height: targetH, seed: trySeed, nologo,
+                                    quality: `m${chosenModel}-a${attempts}`
+                                });
 
-                                    const img = await toFormatted(urlTry, {
-                                        format: outFormat, targetW, targetH, alt: p, signal: currentAbort.signal
-                                    }, 3);
+                                const img = await toFormatted(urlTry, {
+                                    format: outFormat, targetW, targetH, alt: p, signal: currentAbort.signal
+                                }, 3);
 
-                                    if (wantUnique) {
-                                        let isDup = false;
-                                        try {
-                                            const h = _aHash(img, 8); img.dataset.phash = h;
-                                            for (const old of _seenHashes) { if (_hamming(h, old) <= 6) { isDup = true; break; } }
-                                            if (!isDup) _seenHashes.add(h);
-                                        } catch { }
-                                        if (isDup && attempts < (extraBad + extraDup)) { attempts++; continue; }
-                                    }
-
-                                    img.dataset.seed = String(trySeed);
-                                    finalImg = img; break;
+                                if (wantUnique) {
+                                    let isDup = false;
+                                    try {
+                                        const h = _aHash(img, 8); img.dataset.phash = h;
+                                        for (const old of _seenHashes) { if (_hamming(h, old) <= 6) { isDup = true; break; } }
+                                        if (!isDup) _seenHashes.add(h);
+                                    } catch { }
+                                    if (isDup && attempts < (extraBad + extraDup)) { attempts++; continue; }
                                 }
 
-                                if (!finalImg) throw new Error('Failed to get a good, unique image.');
-                                addToGallery(finalImg, p, (els.gpuEnable.checked ? 'GPU' : 'CPU') + ' • ' + chosenModel + ' • auto', i);
-
-                            } catch (err) {
-                                const m = String(err && err.message || err || '');
-                                if (m.includes('SKIP_BAD_IMAGE')) {
-                                    skippedCount++; if (els.skipCounter) els.skipCounter.textContent = `Skipped: ${skippedCount}`;
-                                }
-                                els.statusText.textContent = `Skipped (${m})`;
+                                img.dataset.seed = String(trySeed);
+                                finalImg = img; break;
                             }
 
-                            k++;
-                            setProgress(k, n * prompts.length);
-                            await idle(30);
+                            if (!finalImg) throw new Error('Failed to get a good, unique image.');
+                            addToGallery(finalImg, p, (els.gpuEnable.checked ? 'GPU' : 'CPU') + ' • ' + chosenModel + ' • auto', i);
+
+                        } catch (err) {
+                            const m = String(err && err.message || err || '');
+                            if (m.includes('SKIP_BAD_IMAGE')) {
+                                skippedCount++; if (els.skipCounter) els.skipCounter.textContent = `Skipped: ${skippedCount}`;
+                            }
+                            els.statusText.textContent = `Skipped (${m})`;
                         }
+
+                        k++;
+                        setProgress(k, n * prompts.length);
+                        await idle(30);
                     }
-                    setProgress(n * prompts.length, n * prompts.length);
-                    setBusy(false, 'Done');
-                } finally {
-                    running = false;
-                    els.gen.disabled = false;
-                    els.stop.disabled = true;
-                    currentAbort = null;
                 }
+                setProgress(n * prompts.length, n * prompts.length);
+                setBusy(false, 'Done');
+            } finally {
+                running = false;
+                els.gen.disabled = false;
+                els.stop.disabled = true;
+                currentAbort = null;
             }
+        }
 
-            /* ---------- Download all ---------- */
-            async function downloadAllZip() {
-                const imgs = Array.from(document.querySelectorAll('.imgwrap img'));
-                if (!imgs.length) { return; }
-                const zip = new JSZip(); let i = 1;
-                for (const img of imgs) {
-                    const src = img.dataset.downloadHref || img.src;
-                    const resp = await fetch(src); const blob = await resp.blob(); const arrBuf = await blob.arrayBuffer();
-                    const ext = (img.dataset.format || 'png').replace('jpg', 'jpeg');
-                    const name = filenameFromPrompt(img.alt || 'image', i++, ext);
-                    zip.file(name, arrBuf);
+        /* ---------- Download all ---------- */
+        async function downloadAllZip() {
+            const imgs = Array.from(document.querySelectorAll('.imgwrap img'));
+            if (!imgs.length) { return; }
+            const zip = new JSZip(); let i = 1;
+            for (const img of imgs) {
+                const src = img.dataset.downloadHref || img.src;
+                const resp = await fetch(src); const blob = await resp.blob(); const arrBuf = await blob.arrayBuffer();
+                const ext = (img.dataset.format || 'png').replace('jpg', 'jpeg');
+                const name = filenameFromPrompt(img.alt || 'image', i++, ext);
+                zip.file(name, arrBuf);
+            }
+            const content = await zip.generateAsync({ type: 'blob' }); saveAs(content, 'images.zip');
+        }
+
+        /* ---------- Wire events ---------- */
+        els.gen.addEventListener('click', (e) => { e.preventDefault(); generateBatch(); });
+        els.stop.addEventListener('click', () => {
+            cancel = true;
+            if (currentAbort) { try { currentAbort.abort(); } catch { } }
+            setBusy(false, 'Canceled');
+        });
+        els.clear.addEventListener('click', () => { els.gallery.innerHTML = ''; setProgress(0, 0); updatePromptCount(); });
+        els.downloadAll.addEventListener('click', downloadAllZip);
+        els.surprise.addEventListener('click', () => { els.prompt.value = samples[Math.floor(Math.random() * samples.length)]; updatePromptCount(); });
+        els.pastePrompt = document.getElementById('pastePrompt');
+        els.pastePrompt.addEventListener('click', async () => {
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.readText) {
+                    alert('Clipboard API not available. Use Ctrl+V in the box.');
+                    els.prompt.focus();
+                    return;
                 }
-                const content = await zip.generateAsync({ type: 'blob' }); saveAs(content, 'images.zip');
+                const text = await navigator.clipboard.readText();
+                if (text && text.trim()) {
+                    els.prompt.value = text.trim();
+                    updatePromptCount();
+                } else {
+                    alert('Clipboard is empty!');
+                }
+            } catch (e) {
+                alert('Failed to read clipboard (needs HTTPS or permission).');
+                els.prompt.focus();
             }
+        });
 
-            /* ---------- Wire events ---------- */
-            els.gen.addEventListener('click', (e) => { e.preventDefault(); generateBatch(); });
-            els.stop.addEventListener('click', () => {
-                cancel = true;
-                if (currentAbort) { try { currentAbort.abort(); } catch { } }
-                setBusy(false, 'Canceled');
-            });
-            els.clear.addEventListener('click', () => { els.gallery.innerHTML = ''; setProgress(0, 0); updatePromptCount(); });
-            els.downloadAll.addEventListener('click', downloadAllZip);
-            els.surprise.addEventListener('click', () => { els.prompt.value = samples[Math.floor(Math.random() * samples.length)]; updatePromptCount(); });
-            els.copyPrompt.addEventListener('click', async () => { try { await navigator.clipboard.writeText(els.prompt.value || ''); } catch { } });
 
-            // Defaults
-            els.prompt.value = samples[0];
-            updatePromptCount();
-            updateDerivedHeight();
+        // Defaults
+        els.prompt.value = samples[0];
+        updatePromptCount();
+        updateDerivedHeight();
 
-            // GPU badge init
-            document.addEventListener('DOMContentLoaded', () => {
-                const el = els.gpuInfo; if (!el) return;
-                let label = 'GPU: unavailable';
-                try {
-                    const test = createGLCanvas(2, 2);
-                    if (test && test.gl) {
-                        const name = getGpuReadableName(test.gl) || '';
-                        window.__gpuEnabled = true; window.__gpuName = name || 'WebGL';
-                        label = `GPU: ${test.ver}${name ? ' · ' + name : ''}`;
-                    }
-                } catch { }
-                el.textContent = label;
-            });
+        // GPU badge init
+        document.addEventListener('DOMContentLoaded', () => {
+            const el = els.gpuInfo; if (!el) return;
+            let label = 'GPU: unavailable';
+            try {
+                const test = createGLCanvas(2, 2);
+                if (test && test.gl) {
+                    const name = getGpuReadableName(test.gl) || '';
+                    window.__gpuEnabled = true; window.__gpuName = name || 'WebGL';
+                    label = `GPU: ${test.ver}${name ? ' · ' + name : ''}`;
+                }
+            } catch { }
+            el.textContent = label;
+        });
 
-            // Soft global error surfacing
-            window.addEventListener('error', ev => {
-                const msg = (ev?.error?.message) || ev?.message || 'Unknown error';
-                console.error('Global error:', ev?.error || ev);
-                els.statusText.textContent = `Error: ${msg}`;
-                setBusy(true, 'Error');
-            });
-            window.addEventListener('unhandledrejection', ev => {
-                const msg = (ev?.reason?.message) || ev?.reason || 'Unknown promise rejection';
-                console.error('Unhandled rejection:', ev?.reason);
-                els.statusText.textContent = `Async error: ${msg}`;
-                setBusy(true, 'Error');
-            });
+        // Soft global error surfacing
+        window.addEventListener('error', ev => {
+            const msg = (ev?.error?.message) || ev?.message || 'Unknown error';
+            console.error('Global error:', ev?.error || ev);
+            els.statusText.textContent = `Error: ${msg}`;
+            setBusy(true, 'Error');
+        });
+        window.addEventListener('unhandledrejection', ev => {
+            const msg = (ev?.reason?.message) || ev?.reason || 'Unknown promise rejection';
+            console.error('Unhandled rejection:', ev?.reason);
+            els.statusText.textContent = `Async error: ${msg}`;
+            setBusy(true, 'Error');
+        });
     </script>
 </body>
 
