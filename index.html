@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Puter AI — Advanced txt2img (GPT Image) Demo</title>
+  <title>Text → Image — Pollinations (Unlimited, No Key)</title>
 
-  <!-- Puter.js (no key needed) -->
-  <script src="https://js.puter.com/v2/"></script>
+  <!-- No API key required -->
+  <!-- Pollinations generates directly from URL prompts: https://image.pollinations.ai/prompt/{text}?width=...&height=...&model=... -->
 
-  <!-- Zip helpers for "Download all" -->
+  <!-- Helpers for ZIP download of all images -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
@@ -53,19 +53,19 @@
   <div class="wrap">
     <header class="card">
       <div>
-        <h1>GPT Image — Advanced Text→Image (Puter AI)</h1>
-        <div class="sub">Batch generation, size controls, prompt splitting, and ZIP download — using <code>puter.ai.txt2img()</code>.</div>
+        <h1>Pollinations — Text → Image (Unlimited • No Key)</h1>
+        <div class="sub">Direct URL API: <code>https://image.pollinations.ai/prompt/{your_text}?model=&width=&height=&nologo=true</code></div>
       </div>
       <div style="display:flex;gap:10px;align-items:center">
-        <a class="btn-ghost" href="https://puter.ai" target="_blank" rel="noopener noreferrer" style="text-decoration:none;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);color:inherit">Docs ↗</a>
+        <a class="btn-ghost" href="https://github.com/pollinations/pollinations" target="_blank" rel="noopener noreferrer" style="text-decoration:none;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);color:inherit">API Docs ↗</a>
       </div>
     </header>
 
     <section class="card controls">
       <div class="stack">
         <label>
-          <span>Prompt</span>
-          <textarea id="prompt" placeholder="One or many prompts. If multi-split is ON, choose delimiter below."></textarea>
+          <span>Prompt(s)</span>
+          <textarea id="prompt" placeholder="Enter one or many prompts. Enable 'Split prompts' to use newline, comma, etc."></textarea>
         </label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button id="surprise" class="btn-ghost">Surprise me</button>
@@ -79,8 +79,10 @@
           <label>
             <span>Model</span>
             <select id="model">
-              <option value="gpt-image-1" selected>gpt-image-1</option>
-              <option value="gpt-image-1-mini">gpt-image-1-mini</option>
+              <option value="flux" selected>flux</option>
+              <option value="sdv1">sdv1</option>
+              <option value="sdv2">sdv2</option>
+              <option value="any">any</option>
             </select>
           </label>
           <label>
@@ -100,7 +102,6 @@
           </label>
         </div>
 
-        <!-- Size controls (default 6000x6000) -->
         <div class="row-2">
           <label>
             <span>Width (px)</span>
@@ -126,12 +127,24 @@
               <option value="comma">Comma (,)</option>
               <option value="semicolon">Semicolon (;)</option>
               <option value="pipe">Pipe (|)</option>
-              <option value="space">Single space</option>
+              <option value="space">Space</option>
             </select>
           </label>
         </div>
 
-        <!-- Format controls -->
+        <!-- API options -->
+        <div class="row-2">
+          <label>
+            <span>Seed (optional)</span>
+            <input id="seed" type="number" placeholder="Random if empty" />
+          </label>
+          <label style="display:flex;align-items:center;gap:8px">
+            <input id="nologo" type="checkbox" checked />
+            <span class="pill">nologo=true</span>
+          </label>
+        </div>
+
+        <!-- Output format -->
         <div class="row-2">
           <label>
             <span>Download format</span>
@@ -186,10 +199,12 @@
       width: document.getElementById('width'),
       height: document.getElementById('height'),
       multi: document.getElementById('multi'),
-      delimiter: document.getElementById('delimiter')
+      delimiter: document.getElementById('delimiter'),
+      seed: document.getElementById('seed'),
+      nologo: document.getElementById('nologo')
     };
 
-    const presets = [
+    const samples = [
       'A futuristic cityscape at night, neon rain, reflective streets, cinematic ultrawide, volumetric fog, highly detailed',
       'A cozy reading nook with warm lamp light, rain on the window, soft bokeh, film grain, shallow depth of field',
       'A photorealistic robot barista serving coffee, stainless steel textures, natural morning light, 50mm lens',
@@ -199,89 +214,15 @@
 
     let cancel = false;
 
-    function ensureAPI(){
-      if (!('puter' in window)) throw new Error('Puter JS SDK not loaded.');
-      if (!('ai' in puter) || typeof puter.ai.txt2img !== 'function') throw new Error('puter.ai.txt2img() is unavailable.');
-    }
-
     function setBusy(active, text='Generating…'){ els.status.classList.toggle('hidden', !active); els.statusText.textContent = text; }
     function setProgress(i, n){ els.progress.textContent = `${i}/${n}`; }
+    function updateCharCount(){ els.chars.textContent = `${(els.prompt.value||'').length} chars`; }
+    els.prompt.addEventListener('input', updateCharCount);
 
     function filenameFromPrompt(prompt, i, ext){
       const base = prompt.trim().slice(0, 60).replace(/[^a-z0-9]+/gi,'-').replace(/(^-|-$)/g,'').toLowerCase() || 'image';
       const ts = new Date().toISOString().replace(/[:.]/g,'-');
       return `${base}-${i}-${ts}.${ext}`;
-    }
-
-    // Robust conversion: fetch Blob → draw to 6000×6000 (or chosen) canvas → export PNG/JPEG
-    async function convertImageElement(imgEl, format, quality=0.92, targetW, targetH){
-      try{
-        const resp = await fetch(imgEl.src);
-        const blob = await resp.blob();
-        const url = URL.createObjectURL(blob);
-
-        const img = new Image();
-        img.src = url;
-        await img.decode();
-
-        const w = Math.max(1, parseInt(targetW||img.naturalWidth,10));
-        const h = Math.max(1, parseInt(targetH||img.naturalHeight,10));
-
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-
-        URL.revokeObjectURL(url);
-
-        const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
-        const dataUrl = canvas.toDataURL(mime, format === 'jpeg' ? quality : undefined);
-
-        const out = new Image();
-        out.src = dataUrl;
-        out.alt = imgEl.alt || '';
-        await out.decode();
-
-        out.dataset.mime = mime;
-        out.dataset.format = format;
-        out.dataset.w = String(w);
-        out.dataset.h = String(h);
-        return out;
-      }catch(e){
-        imgEl.dataset.mime = 'image/png';
-        imgEl.dataset.format = 'png';
-        return imgEl;
-      }
-    }
-
-    function addToGallery(img, prompt, model, idx){
-      const card = document.createElement('div'); card.className = 'imgcard';
-      const wrap = document.createElement('div'); wrap.className = 'imgwrap';
-      const ratio = els.aspect.value.split('/').map(Number); if(ratio.length===2){ wrap.style.aspectRatio = `${ratio[0]} / ${ratio[1]}`; }
-      img.alt = prompt; img.loading = 'lazy';
-      wrap.appendChild(img);
-
-      const tools = document.createElement('div'); tools.className = 'imgtools';
-      const meta = document.createElement('div'); meta.className = 'small';
-      const w = img.dataset.w || '—'; const h = img.dataset.h || '—';
-      meta.textContent = `${model} · ${prompt.slice(0,64)}${prompt.length>64?'…':''} · ${w}×${h}`;
-
-      const ext = img.dataset.format || (els.format.value === 'jpeg' ? 'jpeg' : 'png');
-
-      const dl = document.createElement('a'); dl.className = 'btn-ghost'; dl.textContent = 'Download';
-      dl.download = filenameFromPrompt(prompt, idx, ext);
-      dl.href = img.src;
-
-      const copyBtn = document.createElement('button'); copyBtn.className = 'btn-ghost'; copyBtn.textContent = 'Copy image';
-      copyBtn.onclick = async ()=>{
-        try{
-          const blob = await (await fetch(img.src)).blob();
-          await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-        }catch(e){ alert('Copy failed. Your browser may not support ClipboardItem.'); }
-      };
-
-      tools.appendChild(meta); tools.appendChild(copyBtn); tools.appendChild(dl);
-      card.appendChild(wrap); card.appendChild(tools); els.gallery.prepend(card);
     }
 
     function parsePrompts(raw){
@@ -302,6 +243,64 @@
       return parts.map(x=>x.trim()).filter(Boolean);
     }
 
+    function buildPollinationsUrl(prompt, { model, width, height, seed, nologo }){
+      const base = 'https://image.pollinations.ai/prompt/';
+      const q = new URLSearchParams();
+      if (model && model !== 'any') q.set('model', model);
+      if (width) q.set('width', String(width));
+      if (height) q.set('height', String(height));
+      if (nologo) q.set('nologo', 'true');
+      if (seed !== undefined && seed !== null && seed !== '') q.set('seed', String(seed));
+      return base + encodeURIComponent(prompt) + (q.toString() ? ('?' + q.toString()) : '');
+    }
+
+    async function toFormatted(imgUrl, { format, quality, targetW, targetH, alt }){
+      // Fetch → draw to canvas (exact size) → export as chosen format
+      const resp = await fetch(imgUrl, { cache: 'no-store' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = url;
+        await img.decode();
+        const w = Math.max(1, parseInt(targetW||img.naturalWidth,10));
+        const h = Math.max(1, parseInt(targetH||img.naturalHeight,10));
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
+        const dataUrl = canvas.toDataURL(mime, format === 'jpeg' ? quality : undefined);
+        const out = new Image();
+        out.src = dataUrl; out.alt = alt || '';
+        await out.decode();
+        out.dataset.mime = mime; out.dataset.format = format; out.dataset.w = String(w); out.dataset.h = String(h);
+        return out;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    function addToGallery(img, prompt, model, idx){
+      const card = document.createElement('div'); card.className = 'imgcard';
+      const wrap = document.createElement('div'); wrap.className = 'imgwrap';
+      const ratio = els.aspect.value.split('/').map(Number); if(ratio.length===2){ wrap.style.aspectRatio = `${ratio[0]} / ${ratio[1]}`; }
+      img.alt = prompt; img.loading = 'lazy';
+      wrap.appendChild(img);
+      const tools = document.createElement('div'); tools.className = 'imgtools';
+      const meta = document.createElement('div'); meta.className = 'small';
+      const w = img.dataset.w || '—'; const h = img.dataset.h || '—';
+      meta.textContent = `${model} · ${prompt.slice(0,64)}${prompt.length>64?'…':''} · ${w}×${h}`;
+      const ext = img.dataset.format || (els.format.value === 'jpeg' ? 'jpeg' : 'png');
+      const dl = document.createElement('a'); dl.className = 'btn-ghost'; dl.textContent = 'Download'; dl.download = filenameFromPrompt(prompt, idx, ext); dl.href = img.src;
+      const copyBtn = document.createElement('button'); copyBtn.className = 'btn-ghost'; copyBtn.textContent = 'Copy image';
+      copyBtn.onclick = async ()=>{ try{ const b = await (await fetch(img.src)).blob(); await navigator.clipboard.write([new ClipboardItem({ [b.type]: b })]); }catch(e){ alert('Copy failed. Your browser may not support ClipboardItem.'); } };
+      tools.appendChild(meta); tools.appendChild(copyBtn); tools.appendChild(dl);
+      card.appendChild(wrap); card.appendChild(tools); els.gallery.prepend(card);
+    }
+
     async function generateBatch(){
       const prompts = parsePrompts(els.prompt.value);
       if(!prompts.length){ els.prompt.focus(); return; }
@@ -309,21 +308,26 @@
       const outFormat = els.format.value; const quality = Number(els.quality.value || 0.9);
       const targetW = parseInt(els.width.value||6000,10);
       const targetH = parseInt(els.height.value||6000,10);
+      const seedStr = els.seed.value.trim();
+      const seedBase = seedStr ? Number(seedStr) : null;
+      const nologo = !!els.nologo.checked;
 
       cancel = false; setBusy(true, 'Generating…'); setProgress(0, n * prompts.length);
-      try{ ensureAPI(); }catch(e){ setBusy(false); alert(e.message); return; }
 
       let k = 0;
-      for(const p of prompts){
-        for(let i=1;i<=n;i++){
+      for (const p of prompts){
+        for (let i=1;i<=n;i++){
           if(cancel){ setBusy(false, 'Canceled'); return; }
           setProgress(k++, n * prompts.length);
-          try{
-            // Use only model for maximum compatibility; enforce final size via canvas
-            const rawImgEl = await puter.ai.txt2img(p, { model });
-            const finalImg = await convertImageElement(rawImgEl, outFormat, quality, targetW, targetH);
+          try {
+            const seed = seedBase !== null ? (seedBase + i - 1) : Math.floor(Math.random()*1e9);
+            const url = buildPollinationsUrl(p, { model, width: targetW, height: targetH, seed, nologo });
+            const finalImg = await toFormatted(url, { format: outFormat, quality, targetW, targetH, alt: p });
             addToGallery(finalImg, p, model, i);
-          }catch(err){ console.error(err); alert(err?.message || 'Generation failed.'); }
+          } catch (err) {
+            console.error(err);
+            alert('Generation failed.\n\n' + (err && err.message ? err.message : String(err)));
+          }
         }
       }
       setProgress(n * prompts.length, n * prompts.length);
@@ -336,9 +340,7 @@
       const zip = new JSZip();
       let i = 1;
       for(const img of imgs){
-        const resp = await fetch(img.src);
-        const blob = await resp.blob();
-        const arrBuf = await blob.arrayBuffer();
+        const resp = await fetch(img.src); const blob = await resp.blob(); const arrBuf = await blob.arrayBuffer();
         const ext = (img.dataset.format || 'png').replace('jpg','jpeg');
         const name = filenameFromPrompt(img.alt || 'image', i++, ext);
         zip.file(name, arrBuf);
@@ -347,24 +349,19 @@
       saveAs(content, 'images.zip');
     }
 
-    // UI wiring
+    // Wire up UI
     els.gen.addEventListener('click', generateBatch);
     els.stop.addEventListener('click', ()=>{ cancel = true; setBusy(false, 'Canceled'); });
     els.clear.addEventListener('click', ()=>{ els.gallery.innerHTML=''; setProgress(0,0); });
     els.downloadAll.addEventListener('click', downloadAllZip);
-
-    els.surprise.addEventListener('click', ()=>{ els.prompt.value = presets[Math.floor(Math.random()*presets.length)]; updateCharCount(); });
+    els.surprise.addEventListener('click', ()=>{ els.prompt.value = samples[Math.floor(Math.random()*samples.length)]; updateCharCount(); });
     els.copyPrompt.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(els.prompt.value||''); }catch{} });
-    function updateCharCount(){ els.chars.textContent = `${(els.prompt.value||'').length} chars`; }
-    els.prompt.addEventListener('input', updateCharCount);
 
     function updateFormatUI(){ els.jpegControls.classList.toggle('hidden', els.format.value !== 'jpeg'); }
     els.format.addEventListener('change', updateFormatUI);
 
     // Defaults
-    els.prompt.value = presets[0]; updateCharCount(); updateFormatUI();
-    try{ els.multi.checked = JSON.parse(localStorage.getItem('multi_split')||'false'); }catch{}
-    els.multi.addEventListener('change', ()=>{ try{ localStorage.setItem('multi_split', JSON.stringify(els.multi.checked)); }catch{} });
+    els.prompt.value = samples[0]; updateCharCount(); updateFormatUI();
   </script>
 </body>
 </html>
