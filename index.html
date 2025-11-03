@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,43 +11,256 @@
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 
   <style>
-    :root { --bg:#0b0f14; --panel:#121821; --muted:#9db1c7; --text:#e6eef6; --accent:#3b82f6; --accent-2:#22d3ee; --radius:14px; }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:radial-gradient(1200px 600px at 10% -10%,rgba(34,211,238,.08),transparent 60%),radial-gradient(900px 500px at 100% 0,rgba(59,130,246,.08),transparent 60%),var(--bg);color:var(--text)}
-    .wrap{max-width:1100px;margin:48px auto;padding:0 20px}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);box-shadow:0 10px 30px rgba(0,0,0,.35);backdrop-filter:blur(6px)}
-    header.card{padding:20px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    header h1{font-size:clamp(18px,1.6vw + 14px,28px);margin:0;letter-spacing:.2px}
-    .controls{margin-top:18px;padding:18px;display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
-    @media (max-width:900px){.controls{grid-template-columns:1fr}}
-    .stack{display:flex;flex-direction:column;gap:10px}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-    @media (max-width:900px){.grid{grid-template-columns:1fr 1fr}}
-    label span{font-size:13px;color:var(--muted)}
-    textarea,select,input{width:100%;background:var(--panel);color:var(--text);border-radius:10px;border:1px solid rgba(255,255,255,.08);padding:12px 14px;outline:none;font-size:15px;transition:border-color .2s,box-shadow .2s}
-    textarea{min-height:110px;resize:vertical}
-    select:focus,textarea:focus,input:focus{border-color:rgba(34,211,238,.45);box-shadow:0 0 0 4px rgba(34,211,238,.12)}
-    .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end;padding:0 18px 18px}
-    button{appearance:none;border:1px solid transparent;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;transition:transform .04s ease,box-shadow .2s,background .2s,border-color .2s}
-    button:active{transform:translateY(1px)}
-    .btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#06121d;box-shadow:0 8px 20px rgba(34,211,238,.25)}
-    .btn-ghost{background:transparent;border-color:rgba(255,255,255,.12);color:var(--text)}
-    .btn-danger{background:transparent;border-color:rgba(239,68,68,.6);color:#fecaca}
-    .gallery{margin-top:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
-    .imgcard{background:#0e151d;border:1px solid rgba(255,255,255,.06);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
-    .imgwrap{position:relative;width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;background:#0a0f15}
-    .imgwrap img{max-width:100%;max-height:100%;object-fit:contain;display:block}
-    .imgtools{display:flex;gap:8px;padding:10px;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,.06)}
-    .small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .status{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;padding:0 18px 18px}
-    .hidden{display:none!important}
-    .pill{font-size:12px;padding:6px 10px;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(255,255,255,.02)}
-    .row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    @media (max-width:900px){.row-2{grid-template-columns:1fr}}
-    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-    @media (max-width:900px){.row-3{grid-template-columns:1fr}}
+    :root {
+      --bg: #0b0f14;
+      --panel: #121821;
+      --muted: #9db1c7;
+      --text: #e6eef6;
+      --accent: #3b82f6;
+      --accent-2: #22d3ee;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 600px at 10% -10%, rgba(34, 211, 238, .08), transparent 60%), radial-gradient(900px 500px at 100% 0, rgba(59, 130, 246, .08), transparent 60%), var(--bg);
+      color: var(--text)
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 48px auto;
+      padding: 0 20px
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(255, 255, 255, .01));
+      border: 1px solid rgba(255, 255, 255, .06);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+      backdrop-filter: blur(6px)
+    }
+
+    header.card {
+      padding: 20px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px
+    }
+
+    header h1 {
+      font-size: clamp(18px, 1.6vw + 14px, 28px);
+      margin: 0;
+      letter-spacing: .2px
+    }
+
+    .controls {
+      margin-top: 18px;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 16px
+    }
+
+    @media (max-width:900px) {
+      .controls {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px
+    }
+
+    @media (max-width:900px) {
+      .grid {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    label span {
+      font-size: 13px;
+      color: var(--muted)
+    }
+
+    textarea,
+    select,
+    input {
+      width: 100%;
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, .08);
+      padding: 12px 14px;
+      outline: none;
+      font-size: 15px;
+      transition: border-color .2s, box-shadow .2s
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical
+    }
+
+    select:focus,
+    textarea:focus,
+    input:focus {
+      border-color: rgba(34, 211, 238, .45);
+      box-shadow: 0 0 0 4px rgba(34, 211, 238, .12)
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 18px 18px
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .04s ease, box-shadow .2s, background .2s, border-color .2s
+    }
+
+    button:active {
+      transform: translateY(1px)
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      color: #06121d;
+      box-shadow: 0 8px 20px rgba(34, 211, 238, .25)
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: rgba(255, 255, 255, .12);
+      color: var(--text)
+    }
+
+    .btn-danger {
+      background: transparent;
+      border-color: rgba(239, 68, 68, .6);
+      color: #fecaca
+    }
+
+    .gallery {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px
+    }
+
+    .imgcard {
+      background: #0e151d;
+      border: 1px solid rgba(255, 255, 255, .06);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column
+    }
+
+    .imgwrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1/1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0a0f15
+    }
+
+    .imgwrap img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block
+    }
+
+    .imgtools {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, .06)
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 0 18px 18px
+    }
+
+    .hidden {
+      display: none !important
+    }
+
+    .pill {
+      font-size: 12px;
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .02)
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px
+    }
+
+    @media (max-width:900px) {
+      .row-2 {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px
+    }
+
+    @media (max-width:900px) {
+      .row-3 {
+        grid-template-columns: 1fr
+      }
+    }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <header class="card">
@@ -59,7 +273,8 @@
       <div class="stack">
         <label>
           <span>Prompt(s)</span>
-          <textarea id="prompt" placeholder="Enter one or many prompts. Enable 'Split prompts' to use newline, comma, etc."></textarea>
+          <textarea id="prompt"
+            placeholder="Enter one or many prompts. Enable 'Split prompts' to use newline, comma, etc."></textarea>
         </label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button id="surprise" class="btn-ghost">Surprise me</button>
@@ -73,7 +288,12 @@
           <label>
             <span>Batch (images per prompt)</span>
             <select id="count">
-              <option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option>
+              <option>1</option>
+              <option>2</option>
+              <option selected>3</option>
+              <option>4</option>
+              <option>5</option>
+              <option>6</option>
             </select>
           </label>
           <label>
@@ -128,7 +348,8 @@
             <input id="skipAbnormal" type="checkbox" checked />
             <span class="pill">Skip abnormal/distorted images</span>
           </label>
-          <div class="pill" id="skipCounter" style="display:flex;align-items:center;justify-content:center">Skipped: 0</div>
+          <div class="pill" id="skipCounter" style="display:flex;align-items:center;justify-content:center">Skipped: 0
+          </div>
         </div>
 
         <!-- Adaptive learning & dedupe -->
@@ -242,21 +463,21 @@
     function chooseModel(prompt) {
       const p = (prompt || '').toLowerCase();
       const hits = arr => arr.some(k => p.includes(k));
-      if (hits(['photo','photoreal','realistic','dslr','cinematic','bokeh','portrait','macro','lens','hdr','street photography','film'])) return 'flux';
-      if (hits(['anime','manga','illustration','vector','flat','logo','icon','pixel art','isometric','low poly','cartoon','comic','chibi'])) return 'sdv1';
-      if (hits(['abstract','surreal','dreamlike','glitch','fractal','neural','vaporwave'])) return 'sdv2';
-      if (hits(['architecture','interior','exterior','product render','studio light','packshot'])) return 'flux';
-      if (hits(['oil painting','watercolor','gouache','digital painting','concept art','fantasy art'])) return 'sdv1';
+      if (hits(['photo', 'photoreal', 'realistic', 'dslr', 'cinematic', 'bokeh', 'portrait', 'macro', 'lens', 'hdr', 'street photography', 'film'])) return 'flux';
+      if (hits(['anime', 'manga', 'illustration', 'vector', 'flat', 'logo', 'icon', 'pixel art', 'isometric', 'low poly', 'cartoon', 'comic', 'chibi'])) return 'sdv1';
+      if (hits(['abstract', 'surreal', 'dreamlike', 'glitch', 'fractal', 'neural', 'vaporwave'])) return 'sdv2';
+      if (hits(['architecture', 'interior', 'exterior', 'product render', 'studio light', 'packshot'])) return 'flux';
+      if (hits(['oil painting', 'watercolor', 'gouache', 'digital painting', 'concept art', 'fantasy art'])) return 'sdv1';
       return 'flux';
     }
 
     // ------- Local adaptive memory (thumbs feedback) -------
-    function tokenizePrompt(p){ return (p||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(x=>x && x.length>2); }
-    function hashPrompt(p){ let h=0; const s=(p||''); for(let i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0; } return String(h); }
-    function loadPrefs(){ try{ return JSON.parse(localStorage.getItem('aiGen_prefs')||'{}'); }catch{ return {}; } }
-    function savePrefs(obj){ try{ localStorage.setItem('aiGen_prefs', JSON.stringify(obj)); }catch{} }
+    function tokenizePrompt(p) { return (p || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(x => x && x.length > 2); }
+    function hashPrompt(p) { let h = 0; const s = (p || ''); for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return String(h); }
+    function loadPrefs() { try { return JSON.parse(localStorage.getItem('aiGen_prefs') || '{}'); } catch { return {}; } }
+    function savePrefs(obj) { try { localStorage.setItem('aiGen_prefs', JSON.stringify(obj)); } catch { } }
 
-    function recordVote(prompt, model, seed, up){
+    function recordVote(prompt, model, seed, up) {
       const store = loadPrefs();
       store.winners = store.winners || [];
       store.tokens = store.tokens || {};
@@ -264,28 +485,28 @@
       const scoreDelta = up ? 1 : -1;
       store.winners.push({ ph, model, seed, score: scoreDelta, ts: Date.now() });
       if (store.winners.length > 200) store.winners = store.winners.slice(-200);
-      for (const t of tokenizePrompt(prompt)){ store.tokens[t] = (store.tokens[t]||0) + scoreDelta; }
+      for (const t of tokenizePrompt(prompt)) { store.tokens[t] = (store.tokens[t] || 0) + scoreDelta; }
       savePrefs(store);
     }
 
-    function pickSeed(prompt, fallback){
+    function pickSeed(prompt, fallback) {
       const store = loadPrefs();
       const ph = hashPrompt(prompt);
-      const cand = (store.winners||[]).filter(w=>w.ph===ph && Number.isFinite(w.seed)).sort((a,b)=>b.ts-a.ts)[0];
+      const cand = (store.winners || []).filter(w => w.ph === ph && Number.isFinite(w.seed)).sort((a, b) => b.ts - a.ts)[0];
       return cand ? cand.seed : fallback;
     }
 
     // ------- UI helpers -------
-    function setBusy(active, text='Generating…'){ els.status.classList.toggle('hidden', !active); els.statusText.textContent = text; }
-    function setProgress(i, n){ els.progress.textContent = `${i}/${n}`; }
+    function setBusy(active, text = 'Generating…') { els.status.classList.toggle('hidden', !active); els.statusText.textContent = text; }
+    function setProgress(i, n) { els.progress.textContent = `${i}/${n}`; }
 
-    function parsePrompts(raw){
-      const s = (raw||'').trim();
-      if(!s) return [];
-      if(!els.multi.checked) return [s];
+    function parsePrompts(raw) {
+      const s = (raw || '').trim();
+      if (!s) return [];
+      if (!els.multi.checked) return [s];
       const d = els.delimiter.value;
       let parts = [];
-      switch(d){
+      switch (d) {
         case 'newline': parts = s.split(/\n+/); break;
         case 'blankline': parts = s.split(/\n\s*\n+/); break;
         case 'comma': parts = s.split(/\s*,\s*/); break;
@@ -294,26 +515,26 @@
         case 'space': parts = s.split(/\s+/); break;
         default: parts = [s];
       }
-      return parts.map(x=>x.trim()).filter(Boolean);
+      return parts.map(x => x.trim()).filter(Boolean);
     }
 
-    function updatePromptCount(){
+    function updatePromptCount() {
       const list = parsePrompts(els.prompt.value);
       const n = list.length;
-      els.chars.textContent = `${n} prompt${n===1?'':'s'}`;
+      els.chars.textContent = `${n} prompt${n === 1 ? '' : 's'}`;
     }
 
     els.prompt.addEventListener('input', updatePromptCount);
     els.multi.addEventListener('change', updatePromptCount);
     els.delimiter.addEventListener('change', updatePromptCount);
 
-    function filenameFromPrompt(prompt, i, ext){
-      const base = (prompt||'').trim().slice(0,60).replace(/[^a-z0-9]+/gi,'-').replace(/(^-|-$)/g,'').toLowerCase() || 'image';
-      const ts = new Date().toISOString().replace(/[:.]/g,'-');
+    function filenameFromPrompt(prompt, i, ext) {
+      const base = (prompt || '').trim().slice(0, 60).replace(/[^a-z0-9]+/gi, '-').replace(/(^-|-$)/g, '').toLowerCase() || 'image';
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
       return `${base}-${i}-${ts}.${ext}`;
     }
 
-    function buildPollinationsUrl(prompt, { model, width, height, seed, nologo }){
+    function buildPollinationsUrl(prompt, { model, width, height, seed, nologo }) {
       const base = 'https://image.pollinations.ai/prompt/';
       const q = new URLSearchParams();
       if (model && model !== 'any') q.set('model', model);
@@ -325,11 +546,11 @@
     }
 
     // ------- Aspect/size helpers -------
-    function parseAspect(val){
+    function parseAspect(val) {
       const [aw, ah] = (val || '1/1').split('/').map(Number);
-      return { aw: Math.max(1, aw|0), ah: Math.max(1, ah|0) };
+      return { aw: Math.max(1, aw | 0), ah: Math.max(1, ah | 0) };
     }
-    function updateDerivedHeight(){
+    function updateDerivedHeight() {
       const { aw, ah } = parseAspect(els.aspect.value);
       const raw = (els.width.value || '').trim();
       if (raw === '') { els.heightComputed.value = ''; return; }
@@ -340,13 +561,13 @@
     }
 
     // ------- Image quality heuristics (skip bad renders) -------
-    function nearlyEqualRatio(a, b, tol = 0.12){ return Math.abs(a - b) / Math.max(a, b) <= tol; }
-    async function analyzeImageQuality(img, wantW, wantH){
+    function nearlyEqualRatio(a, b, tol = 0.12) { return Math.abs(a - b) / Math.max(a, b) <= tol; }
+    async function analyzeImageQuality(img, wantW, wantH) {
       const w = img.naturalWidth || img.width || 0;
       const h = img.naturalHeight || img.height || 0;
       if (!Number.isFinite(w) || !Number.isFinite(h) || w < 64 || h < 64) return false;
       const wantR = wantW && wantH ? wantW / wantH : null;
-      if (wantR){
+      if (wantR) {
         const gotR = w / h;
         if (!nearlyEqualRatio(gotR, wantR, 0.2)) return false;
       }
@@ -356,10 +577,10 @@
       ctx.drawImage(img, 0, 0, s, s);
       const data = ctx.getImageData(0, 0, s, s).data;
       let mean = 0; const n = s * s;
-      for (let i=0;i<n;i++){ const r=data[i*4], g=data[i*4+1], b=data[i*4+2]; mean += 0.2126*r + 0.7152*g + 0.0722*b; }
+      for (let i = 0; i < n; i++) { const r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2]; mean += 0.2126 * r + 0.7152 * g + 0.0722 * b; }
       mean /= n;
       let variance = 0;
-      for (let i=0;i<n;i++){ const r=data[i*4], g=data[i*4+1], b=data[i*4+2]; const y=0.2126*r + 0.7152*g + 0.0722*b; const d=y-mean; variance += d*d; }
+      for (let i = 0; i < n; i++) { const r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2]; const y = 0.2126 * r + 0.7152 * g + 0.0722 * b; const d = y - mean; variance += d * d; }
       variance /= n; const stdev = Math.sqrt(variance);
       if (stdev < 6) return false;
       return true;
@@ -367,26 +588,26 @@
 
     // ------- Perceptual hash (aHash) for duplicate detection -------
     const _seenHashes = new Set();
-    function _aHash(img, size = 8){
-      const s = size|0;
+    function _aHash(img, size = 8) {
+      const s = size | 0;
       const c = document.createElement('canvas'); c.width = s; c.height = s;
       const ctx = c.getContext('2d');
       ctx.drawImage(img, 0, 0, s, s);
       const data = ctx.getImageData(0, 0, s, s).data;
-      const gs = new Array(s*s);
-      for (let i=0;i<s*s;i++){ const r=data[i*4], g=data[i*4+1], b=data[i*4+2]; gs[i] = Math.round(0.299*r + 0.587*g + 0.114*b); }
-      const mean = gs.reduce((a,b)=>a+b,0)/(s*s);
-      let bits=''; for (let i=0;i<gs.length;i++) bits += (gs[i] >= mean ? '1' : '0');
-      let hex=''; for (let i=0;i<bits.length;i+=4) hex += parseInt(bits.slice(i,i+4),2).toString(16);
+      const gs = new Array(s * s);
+      for (let i = 0; i < s * s; i++) { const r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2]; gs[i] = Math.round(0.299 * r + 0.587 * g + 0.114 * b); }
+      const mean = gs.reduce((a, b) => a + b, 0) / (s * s);
+      let bits = ''; for (let i = 0; i < gs.length; i++) bits += (gs[i] >= mean ? '1' : '0');
+      let hex = ''; for (let i = 0; i < bits.length; i += 4) hex += parseInt(bits.slice(i, i + 4), 2).toString(16);
       return hex;
     }
-    function _hamming(a,b){ if(!a||!b||a.length!==b.length) return 64; let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) d++; return d; }
+    function _hamming(a, b) { if (!a || !b || a.length !== b.length) return 64; let d = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++; return d; }
 
     // ------- Auto upscaler helpers (always on) -------
-    function createCanvas(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
-    function drawImageHQ(ctx, img, dx, dy, dw, dh){ ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality='high'; ctx.drawImage(img, dx, dy, dw, dh); }
+    function createCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+    function drawImageHQ(ctx, img, dx, dy, dw, dh) { ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(img, dx, dy, dw, dh); }
 
-    function multiStepResize(img, tw, th){
+    function multiStepResize(img, tw, th) {
       // Progressive ×1.5 steps (reduces aliasing, preserves detail)
       let cw = img.naturalWidth || img.width;
       let ch = img.naturalHeight || img.height;
@@ -399,7 +620,7 @@
         drawImageHQ(tctx, src, 0, 0, nw, nh);
         src = tmp; cw = nw; ch = nh;
       }
-      if (cw !== tw || ch !== th){
+      if (cw !== tw || ch !== th) {
         const f = createCanvas(tw, th);
         const fctx = f.getContext('2d');
         drawImageHQ(fctx, src, 0, 0, tw, th);
@@ -409,117 +630,117 @@
     }
 
     // Fixed, light post-processing (no UI)
-    function applyMedianBlend(canvas, strength){
+    function applyMedianBlend(canvas, strength) {
       if (strength <= 0) return canvas;
-      const w=canvas.width, h=canvas.height;
-      const ctx=canvas.getContext('2d');
-      const src=ctx.getImageData(0,0,w,h);
-      const dst=ctx.createImageData(w,h);
-      const s=src.data, d=dst.data;
-      const idx=(x,y)=> (y*w + x)*4;
-      const kx=[-1,0,1,-1,0,1,-1,0,1];
-      const ky=[-1,-1,-1,0,0,0,1,1,1];
-      for(let y=1;y<h-1;y++){
-        for(let x=1;x<w-1;x++){
-          const rA=[], gA=[], bA=[];
-          for(let k=0;k<9;k++){
-            const i=idx(x+kx[k], y+ky[k]);
-            rA.push(s[i]); gA.push(s[i+1]); bA.push(s[i+2]);
+      const w = canvas.width, h = canvas.height;
+      const ctx = canvas.getContext('2d');
+      const src = ctx.getImageData(0, 0, w, h);
+      const dst = ctx.createImageData(w, h);
+      const s = src.data, d = dst.data;
+      const idx = (x, y) => (y * w + x) * 4;
+      const kx = [-1, 0, 1, -1, 0, 1, -1, 0, 1];
+      const ky = [-1, -1, -1, 0, 0, 0, 1, 1, 1];
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const rA = [], gA = [], bA = [];
+          for (let k = 0; k < 9; k++) {
+            const i = idx(x + kx[k], y + ky[k]);
+            rA.push(s[i]); gA.push(s[i + 1]); bA.push(s[i + 2]);
           }
-          rA.sort((a,b)=>a-b); gA.sort((a,b)=>a-b); bA.sort((a,b)=>a-b);
-          const i=idx(x,y);
-          const mr=rA[4], mg=gA[4], mb=bA[4];
-          d[i]   = Math.round(s[i]   *(1-strength) + mr*strength);
-          d[i+1] = Math.round(s[i+1] *(1-strength) + mg*strength);
-          d[i+2] = Math.round(s[i+2] *(1-strength) + mb*strength);
-          d[i+3] = s[i+3];
+          rA.sort((a, b) => a - b); gA.sort((a, b) => a - b); bA.sort((a, b) => a - b);
+          const i = idx(x, y);
+          const mr = rA[4], mg = gA[4], mb = bA[4];
+          d[i] = Math.round(s[i] * (1 - strength) + mr * strength);
+          d[i + 1] = Math.round(s[i + 1] * (1 - strength) + mg * strength);
+          d[i + 2] = Math.round(s[i + 2] * (1 - strength) + mb * strength);
+          d[i + 3] = s[i + 3];
         }
       }
-      ctx.putImageData(dst,0,0);
+      ctx.putImageData(dst, 0, 0);
       return canvas;
     }
 
-    function applySharpen(canvas, amount){
+    function applySharpen(canvas, amount) {
       if (amount <= 0) return canvas;
-      const w=canvas.width, h=canvas.height;
-      const ctx=canvas.getContext('2d');
-      const src=ctx.getImageData(0,0,w,h);
-      const dst=ctx.createImageData(w,h);
-      const s=src.data, d=dst.data;
-      const a=amount;
-      const k=[0,-1*a,0,-1*a,1+4*a,-1*a,0,-1*a,0];
-      const pix=(x,y,c)=> s[(y*w + x)*4 + c] | 0;
-      for(let y=1;y<h-1;y++){
-        for(let x=1;x<w-1;x++){
-          for(let c=0;c<3;c++){
-            const val=
-              pix(x-1,y-1,c)*k[0] + pix(x,y-1,c)*k[1] + pix(x+1,y-1,c)*k[2] +
-              pix(x-1,y,c)*k[3]   + pix(x,y,c)*k[4]   + pix(x+1,y,c)*k[5] +
-              pix(x-1,y+1,c)*k[6] + pix(x,y+1,c)*k[7] + pix(x+1,y+1,c)*k[8];
-            d[(y*w + x)*4 + c] = Math.max(0, Math.min(255, val));
+      const w = canvas.width, h = canvas.height;
+      const ctx = canvas.getContext('2d');
+      const src = ctx.getImageData(0, 0, w, h);
+      const dst = ctx.createImageData(w, h);
+      const s = src.data, d = dst.data;
+      const a = amount;
+      const k = [0, -1 * a, 0, -1 * a, 1 + 4 * a, -1 * a, 0, -1 * a, 0];
+      const pix = (x, y, c) => s[(y * w + x) * 4 + c] | 0;
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          for (let c = 0; c < 3; c++) {
+            const val =
+              pix(x - 1, y - 1, c) * k[0] + pix(x, y - 1, c) * k[1] + pix(x + 1, y - 1, c) * k[2] +
+              pix(x - 1, y, c) * k[3] + pix(x, y, c) * k[4] + pix(x + 1, y, c) * k[5] +
+              pix(x - 1, y + 1, c) * k[6] + pix(x, y + 1, c) * k[7] + pix(x + 1, y + 1, c) * k[8];
+            d[(y * w + x) * 4 + c] = Math.max(0, Math.min(255, val));
           }
-          d[(y*w + x)*4 + 3] = s[(y*w + x)*4 + 3];
+          d[(y * w + x) * 4 + 3] = s[(y * w + x) * 4 + 3];
         }
       }
-      ctx.putImageData(dst,0,0);
+      ctx.putImageData(dst, 0, 0);
       return canvas;
     }
 
-    function applyContrast(canvas, boost){
+    function applyContrast(canvas, boost) {
       if (boost <= 0) return canvas;
-      const ctx=canvas.getContext('2d');
-      const {width:w, height:h}=canvas;
-      const img=ctx.getImageData(0,0,w,h);
-      const d=img.data;
-      const f=(1+boost), m=128;
-      for(let i=0;i<d.length;i+=4){
-        d[i]   = Math.max(0, Math.min(255,(d[i]-m)*f + m));
-        d[i+1] = Math.max(0, Math.min(255,(d[i+1]-m)*f + m));
-        d[i+2] = Math.max(0, Math.min(255,(d[i+2]-m)*f + m));
+      const ctx = canvas.getContext('2d');
+      const { width: w, height: h } = canvas;
+      const img = ctx.getImageData(0, 0, w, h);
+      const d = img.data;
+      const f = (1 + boost), m = 128;
+      for (let i = 0; i < d.length; i += 4) {
+        d[i] = Math.max(0, Math.min(255, (d[i] - m) * f + m));
+        d[i + 1] = Math.max(0, Math.min(255, (d[i + 1] - m) * f + m));
+        d[i + 2] = Math.max(0, Math.min(255, (d[i + 2] - m) * f + m));
       }
-      ctx.putImageData(img,0,0);
+      ctx.putImageData(img, 0, 0);
       return canvas;
     }
 
     // ------- Fetch + auto upscaler + encode -------
-    async function toFormatted(imgUrl, { format, targetW, targetH, alt }, tries=3, jitterMs=250){
-      const maxTries = Math.max(1, Number(tries)||3);
-      const jitter = Number(jitterMs)||250;
+    async function toFormatted(imgUrl, { format, targetW, targetH, alt }, tries = 3, jitterMs = 250) {
+      const maxTries = Math.max(1, Number(tries) || 3);
+      const jitter = Number(jitterMs) || 250;
 
-      for (let attempt=1; attempt<=maxTries; attempt++){
-        const isLast = attempt===maxTries;
-        const bust = (imgUrl.includes('?')?'&':'?') + 'ts=' + Date.now();
+      for (let attempt = 1; attempt <= maxTries; attempt++) {
+        const isLast = attempt === maxTries;
+        const bust = (imgUrl.includes('?') ? '&' : '?') + 'ts=' + Date.now();
         const urlWithBust = imgUrl + bust;
-        try{
-          const resp = await fetch(urlWithBust, { cache:'no-store' });
-          if(!resp.ok){
-            if(!isLast && (resp.status===429 || resp.status>=500)){
-              await new Promise(r=>setTimeout(r, attempt*600 + Math.random()*jitter));
+        try {
+          const resp = await fetch(urlWithBust, { cache: 'no-store' });
+          if (!resp.ok) {
+            if (!isLast && (resp.status === 429 || resp.status >= 500)) {
+              await new Promise(r => setTimeout(r, attempt * 600 + Math.random() * jitter));
               continue;
             }
             throw new Error(`HTTP ${resp.status}`);
           }
           const ctype = resp.headers.get('content-type') || '';
-          if (!ctype.startsWith('image/')){
-            const txt = await resp.clone().text().catch(()=> '');
-            if (!isLast){
-              await new Promise(r=>setTimeout(r, attempt*600 + Math.random()*jitter));
+          if (!ctype.startsWith('image/')) {
+            const txt = await resp.clone().text().catch(() => '');
+            if (!isLast) {
+              await new Promise(r => setTimeout(r, attempt * 600 + Math.random() * jitter));
               continue;
             }
-            throw new Error(`Non-image response (${ctype}). Body: ${txt.slice(0,300)}`);
+            throw new Error(`Non-image response (${ctype}). Body: ${txt.slice(0, 300)}`);
           }
 
           const blob = await resp.blob();
           const originalObjUrl = URL.createObjectURL(blob);
-          try{
+          try {
             const probe = new Image();
             probe.crossOrigin = 'anonymous';
             probe.src = originalObjUrl;
             await probe.decode();
 
-            if (els.skipAbnormal && els.skipAbnormal.checked){
+            if (els.skipAbnormal && els.skipAbnormal.checked) {
               const ok = await analyzeImageQuality(probe, targetW, targetH);
-              if (!ok){ throw new Error('SKIP_BAD_IMAGE'); }
+              if (!ok) { throw new Error('SKIP_BAD_IMAGE'); }
             }
 
             // Always-on auto upscale + light enhancement
@@ -545,9 +766,9 @@
             URL.revokeObjectURL(originalObjUrl);
           }
 
-        } catch(e){
-          if(!isLast){
-            await new Promise(r=>setTimeout(r, attempt*600 + Math.random()*jitter));
+        } catch (e) {
+          if (!isLast) {
+            await new Promise(r => setTimeout(r, attempt * 600 + Math.random() * jitter));
             continue;
           }
           throw e;
@@ -557,37 +778,37 @@
     }
 
     // ------- UI rendering -------
-    function addToGallery(img, prompt, model, idx){
+    function addToGallery(img, prompt, model, idx) {
       const card = document.createElement('div'); card.className = 'imgcard';
       const wrap = document.createElement('div'); wrap.className = 'imgwrap';
-      const ratio = els.aspect.value.split('/').map(Number); if(ratio.length===2){ wrap.style.aspectRatio = `${ratio[0]} / ${ratio[1]}`; }
+      const ratio = els.aspect.value.split('/').map(Number); if (ratio.length === 2) { wrap.style.aspectRatio = `${ratio[0]} / ${ratio[1]}`; }
       img.alt = prompt; img.loading = 'lazy';
       wrap.appendChild(img);
 
       const tools = document.createElement('div'); tools.className = 'imgtools';
       const meta = document.createElement('div'); meta.className = 'small';
       const w = img.dataset.w || '—', h = img.dataset.h || '—';
-      meta.textContent = `${model} · ${prompt.slice(0,64)}${prompt.length>64?'…':''} · ${w}×${h}`;
+      meta.textContent = `${model} · ${prompt.slice(0, 64)}${prompt.length > 64 ? '…' : ''} · ${w}×${h}`;
 
       const upBtn = document.createElement('button'); upBtn.className = 'btn-ghost'; upBtn.textContent = '👍';
       upBtn.title = 'Looks good';
-      upBtn.onclick = ()=> recordVote(prompt, model, Number(img.dataset.seed||0), true);
+      upBtn.onclick = () => recordVote(prompt, model, Number(img.dataset.seed || 0), true);
 
       const downBtn = document.createElement('button'); downBtn.className = 'btn-ghost'; downBtn.textContent = '👎';
       downBtn.title = 'Looks bad';
-      downBtn.onclick = ()=> recordVote(prompt, model, Number(img.dataset.seed||0), false);
+      downBtn.onclick = () => recordVote(prompt, model, Number(img.dataset.seed || 0), false);
 
       const dl = document.createElement('a'); dl.className = 'btn-ghost'; dl.textContent = 'Download';
-      const ext = img.dataset.format || (els.format.value==='jpeg' ? 'jpeg' : 'png');
+      const ext = img.dataset.format || (els.format.value === 'jpeg' ? 'jpeg' : 'png');
       dl.download = filenameFromPrompt(prompt, idx, ext);
       dl.href = img.dataset.downloadHref || img.src;
 
       const copyBtn = document.createElement('button'); copyBtn.className = 'btn-ghost'; copyBtn.textContent = 'Copy image';
-      copyBtn.onclick = async ()=>{
-        try{
+      copyBtn.onclick = async () => {
+        try {
           const b = await (await fetch(img.src)).blob();
           await navigator.clipboard.write([new ClipboardItem({ [b.type]: b })]);
-        }catch(e){ alert('Copy failed. Your browser may not support ClipboardItem.'); }
+        } catch (e) { alert('Copy failed. Your browser may not support ClipboardItem.'); }
       };
 
       tools.appendChild(meta);
@@ -602,10 +823,10 @@
     }
 
     // ------- Main flow -------
-    async function generateBatch(){
+    async function generateBatch() {
       const prompts = parsePrompts(els.prompt.value);
-      if(!prompts.length){ els.prompt.focus(); return; }
-      const n = parseInt(els.count.value,10) || 1;
+      if (!prompts.length) { els.prompt.focus(); return; }
+      const n = parseInt(els.count.value, 10) || 1;
       const outFormat = els.format.value;
       const seedBase = els.seed.value.trim() ? Number(els.seed.value.trim()) : null;
       const nologo = !!els.nologo.checked;
@@ -616,18 +837,18 @@
       if (targetW > 16384) targetW = 16384;
       const targetH = els.lockAspect.checked
         ? Math.max(1, Math.round(targetW * (ah / aw)))
-        : Math.max(1, parseInt(els.heightComputed.value||'0',10) || Math.round(targetW * (ah/aw)));
+        : Math.max(1, parseInt(els.heightComputed.value || '0', 10) || Math.round(targetW * (ah / aw)));
       els.heightComputed.value = String(targetH);
 
-      cancel = false; setBusy(true, 'Generating…'); setProgress(0, n*prompts.length);
+      cancel = false; setBusy(true, 'Generating…'); setProgress(0, n * prompts.length);
       let k = 0; let skippedCount = 0; if (els.skipCounter) els.skipCounter.textContent = 'Skipped: 0';
       _seenHashes.clear();
 
-      for (const p of prompts){
-        for(let i=1;i<=n;i++){
-          if(cancel){ setBusy(false, 'Canceled'); return; }
-          setProgress(k++, n*prompts.length);
-          try{
+      for (const p of prompts) {
+        for (let i = 1; i <= n; i++) {
+          if (cancel) { setBusy(false, 'Canceled'); return; }
+          setProgress(k++, n * prompts.length);
+          try {
             const chosenModel = chooseModel(p);
             const extraBad = Math.max(0, parseInt((els.smartRetries && els.smartRetries.value) || '0', 10));
             const extraDup = Math.max(0, parseInt((els.uniqueRetries && els.uniqueRetries.value) || '0', 10));
@@ -636,11 +857,11 @@
             let finalImg = null;
             let attempts = 0;
 
-            while (attempts <= (extraBad + extraDup)){
-              try{
-                const base = seedBase !== null ? (seedBase + i - 1) : Math.floor(Math.random()*1e9);
+            while (attempts <= (extraBad + extraDup)) {
+              try {
+                const base = seedBase !== null ? (seedBase + i - 1) : Math.floor(Math.random() * 1e9);
                 const thisSeed = (els.adaptive && els.adaptive.checked) ? pickSeed(p, base) : base;
-                const jitter = attempts === 0 ? 0 : (attempts*9973 + Math.floor(Math.random()*1000));
+                const jitter = attempts === 0 ? 0 : (attempts * 9973 + Math.floor(Math.random() * 1000));
                 const trySeed = thisSeed + jitter;
 
                 const urlTry = buildPollinationsUrl(p, { model: chosenModel, width: targetW, height: targetH, seed: trySeed, nologo });
@@ -655,7 +876,7 @@
                     for (const old of _seenHashes) { if (_hamming(h, old) <= 6) { isDup = true; break; } }
                     if (!isDup) _seenHashes.add(h);
                   } catch { /* ignore hashing failures */ }
-                  if (isDup && attempts < (extraBad + extraDup)){
+                  if (isDup && attempts < (extraBad + extraDup)) {
                     attempts++;
                     continue;
                   }
@@ -665,9 +886,9 @@
                 finalImg = img;
                 break;
 
-              } catch(e){
+              } catch (e) {
                 const msg = String(e && e.message || e || '');
-                if (msg.includes('SKIP_BAD_IMAGE') && attempts < (extraBad + extraDup)){
+                if (msg.includes('SKIP_BAD_IMAGE') && attempts < (extraBad + extraDup)) {
                   attempts++; skippedCount++;
                   if (els.skipCounter) els.skipCounter.textContent = `Skipped: ${skippedCount}`;
                   continue;
@@ -679,28 +900,28 @@
             if (!finalImg) throw new Error('Failed to get a good, unique image.');
             addToGallery(finalImg, p, chosenModel + ' • auto', i);
 
-          }catch(err){
+          } catch (err) {
             console.error(err);
             alert('Generation failed.\n\n' + (err && err.message ? err.message : String(err)));
           }
-          await new Promise(r=>setTimeout(r, 200));
+          await new Promise(r => setTimeout(r, 200));
         }
       }
-      setProgress(n*prompts.length, n*prompts.length);
+      setProgress(n * prompts.length, n * prompts.length);
       setBusy(false, 'Done');
     }
 
-    async function downloadAllZip(){
+    async function downloadAllZip() {
       const imgs = Array.from(document.querySelectorAll('.imgwrap img'));
-      if(!imgs.length){ alert('No images to download.'); return; }
+      if (!imgs.length) { alert('No images to download.'); return; }
       const zip = new JSZip();
       let i = 1;
-      for(const img of imgs){
+      for (const img of imgs) {
         const src = img.dataset.downloadHref || img.src;
         const resp = await fetch(src);
         const blob = await resp.blob();
         const arrBuf = await blob.arrayBuffer();
-        const ext = (img.dataset.format || 'png').replace('jpg','jpeg');
+        const ext = (img.dataset.format || 'png').replace('jpg', 'jpeg');
         const name = filenameFromPrompt(img.alt || 'image', i++, ext);
         zip.file(name, arrBuf);
       }
@@ -709,12 +930,12 @@
     }
 
     // ------- Wire events -------
-    els.gen.addEventListener('click', async (e)=>{ e.preventDefault(); await generateBatch(); });
-    els.stop.addEventListener('click', ()=>{ cancel = true; setBusy(false, 'Canceled'); });
-    els.clear.addEventListener('click', ()=>{ els.gallery.innerHTML=''; setProgress(0,0); updatePromptCount(); });
+    els.gen.addEventListener('click', async (e) => { e.preventDefault(); await generateBatch(); });
+    els.stop.addEventListener('click', () => { cancel = true; setBusy(false, 'Canceled'); });
+    els.clear.addEventListener('click', () => { els.gallery.innerHTML = ''; setProgress(0, 0); updatePromptCount(); });
     els.downloadAll.addEventListener('click', downloadAllZip);
-    els.surprise.addEventListener('click', ()=>{ els.prompt.value = samples[Math.floor(Math.random()*samples.length)]; updatePromptCount(); });
-    els.copyPrompt.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(els.prompt.value||''); }catch{} });
+    els.surprise.addEventListener('click', () => { els.prompt.value = samples[Math.floor(Math.random() * samples.length)]; updatePromptCount(); });
+    els.copyPrompt.addEventListener('click', async () => { try { await navigator.clipboard.writeText(els.prompt.value || ''); } catch { } });
 
     // Keep computed height in sync whenever width/aspect change
     els.width.addEventListener('input', updateDerivedHeight);
@@ -726,16 +947,17 @@
     updateDerivedHeight();
 
     // Global error surfacing
-    window.addEventListener('error', ev=>{
+    window.addEventListener('error', ev => {
       const msg = (ev?.error?.message) || ev?.message || 'Unknown error';
       console.error('Global error:', ev?.error || ev);
       alert('Script error: ' + msg);
     });
-    window.addEventListener('unhandledrejection', ev=>{
+    window.addEventListener('unhandledrejection', ev => {
       const msg = (ev?.reason?.message) || ev?.reason || 'Unknown promise rejection';
       console.error('Unhandled rejection:', ev?.reason);
       alert('Async error: ' + msg);
     });
   </script>
 </body>
+
 </html>
